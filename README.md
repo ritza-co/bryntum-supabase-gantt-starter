@@ -13,22 +13,22 @@ And sign up for a trial version of [Bryntum Gantt](https://bryntum.com/download/
 For us to set up the Supabase Edge Functions, we first need to get a few things ready!
 
 Ensure you have created a project inside your organization:
-![Create project](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_project_creation.png)
+![Create project](Bryntum Gantt Screenshots/supabase_project_creation.png)
 
 Or create a new one if you don't:
-![Create project form](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_project_creation_form.png)
+![Create project form](Bryntum Gantt Screenshots/supabase_project_creation_form.png)
 
 Once you have created you project, open the projects settings and take note of your Reference ID, we will need this later:
-![Create project ref](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_project_ref_id.png)
+![Create project ref](Bryntum Gantt Screenshots/supabase_project_ref_id.png)
 
 Then select API in project settings and take note of your Project API key, we need the one labeled `anon` `public` :
-![Create project anon key](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_project_anon_key.png)
+![Create project anon key](Bryntum Gantt Screenshots/supabase_project_anon_key.png)
 
 We need to add a new user, also taking note of the email and password to use later, this is found in the Authentication tab:
 ![Create user](blob/main/Bryntum%20Gantt%20Screenshots/supabase_user_management.png)
 
 Now select the SQL Editor tab:
-![Create query](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_sql_insert.png)
+![Create query](Bryntum Gantt Screenshots/supabase_sql_insert.png)
 
 Create a new SQL query and copy the following SQL commands: 
 ```sql
@@ -109,8 +109,8 @@ VALUES
 After those SQL commands have been executed, we created two tables: tasks & dependencies. We then populated those tables with some data. We can use our edge function to retrieve this data from within our React application.
 
 Now that we have our tables created we can enable RLS them:
-![Create table policy](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_tabel_policy_creation.png)
-![Create table policy form](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_tabel_policy_creation_form.png)
+![Create table policy](Bryntum Gantt Screenshots/supabase_tabel_policy_creation.png)
+![Create table policy form](Bryntum Gantt Screenshots/supabase_tabel_policy_creation_form.png)
 
 The same process need to be followed for every table we have added and would like to access. This allows the user we created to read the data in these two tables, but will prevent any user that is not authenticated from doing so. 
 Tables that do not have any policies assigned will not allow any user (other than superuser) access to the table data.
@@ -209,7 +209,7 @@ supabase functions deploy hello-world --project-ref <Project_Ref_Id>
 ```
 
 You should then see your edge function deployed to your Supabase project:
-![View deployed function](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_edge_function_deployed.png)
+![View deployed function](Bryntum Gantt Screenshots/supabase_edge_function_deployed.png)
 
 As you can see, creating edge functions is fairly straightforward. You now have authorized access to the data in the tables on which we have applied to appropriate policies. Edge functions run server-side, and enforce security policies, this gives us secure and low-latency access to the data we have stored.
 ## React Application
@@ -346,10 +346,10 @@ npm start
 
 Visit the URL of you application in your browser, you will be greeted with your new login screen:
 
-![View deployed function](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/bryntum_login.png)
+![View deployed function](Bryntum Gantt Screenshots/bryntum_login.png)
 
 Once you have logged in, you will see your new Bryntum Gantt Chart with data that was retrieved from the Supabase Edge function we created earlier.
-![View deployed function](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/bryntum_view.png)
+![View deployed function](Bryntum Gantt Screenshots/bryntum_view.png)
 You can sign out again by clicking on the `Sign Out` button below the chart.
 
 This tuorial only began to explore the power of these two tools working together. I highly encourage you to dive deeper into each projects documentation to learn more.
