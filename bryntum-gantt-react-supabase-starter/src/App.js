@@ -1,25 +1,43 @@
-import logo from './logo.svg';
-import './App.css';
+import './App.scss';
+import './index.css'
+import { useState, useEffect } from 'react'
+import { supabase } from './utils/supabaseClient'
+import { Auth } from '@supabase/auth-ui-react'
+import { ThemeSupa } from '@supabase/auth-ui-shared'
+import { BryntumGantt } from '@bryntum/gantt-react';
+import { gantt } from './ganttChart';
+import './App.scss';
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+  const [session, setSession] = useState(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+  
+  if (!session) {
+    return (<Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />)
+  }
+  else {
+    return (<div><BryntumGantt {...gantt} />
+    <button
+      className=""
+      onClick={() => supabase.auth.signOut()}
+    >
+      Sign out
+    </button></div>)
+  }
+  
 }
 
 export default App;
