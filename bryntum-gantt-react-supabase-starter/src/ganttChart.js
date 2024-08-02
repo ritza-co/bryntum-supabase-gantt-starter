@@ -1,6 +1,5 @@
 
 import { supabase } from './utils/supabaseClient'
-import './test.json'
 
 // const store = 
 const { data, error } = await supabase.functions.invoke("gantt-data", {"name":"Functions"})
