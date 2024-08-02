@@ -6,7 +6,6 @@ import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { BryntumGantt } from '@bryntum/gantt-react';
 import { gantt } from './ganttChart';
-import './App.scss';
 
 function App() {
   const [session, setSession] = useState(null)
@@ -26,16 +25,20 @@ function App() {
   }, [])
   
   if (!session) {
-    return (<Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />)
+    return (<div style={{display: 'flex',  justifyContent:'center', alignItems:'center', height: '100vh'}}>
+            <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />
+          </div>)
   }
   else {
-    return (<div><BryntumGantt {...gantt} />
-    <button
-      className=""
-      onClick={() => supabase.auth.signOut()}
-    >
-      Sign out
-    </button></div>)
+    return (
+    <div style={{ height: '100%', justifyContent: 'space-around', alignContent: 'center'}}>
+      <BryntumGantt {...gantt} />
+      <button
+        onClick={() => supabase.auth.signOut()}
+      >
+        Sign out
+      </button>
+    </div>)
   }
   
 }
