@@ -22,7 +22,7 @@ Once you have created you project, open the projects settings and take note of y
 ![Create project ref](https://github.com/user-attachments/assets/1de89210-f2c5-4b15-8678-415824b1a712)
 
 Then select API in project settings and take note of your Project API key, we need the one labeled `anon` `public` :
-![Create project anon key](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_project_anon_key.png)
+![Create project anon key](https://github.com/user-attachments/assets/c7751490-97d7-4d63-bf6f-f05f62268e34)
 
 We need to add a new user, also taking note of the email and password to use later, this is found in the Authentication tab:
 ![Create user](https://github.com/user-attachments/assets/17e29527-ee0e-49f8-9687-80453c2ee20d)
