@@ -25,7 +25,7 @@ Then select API in project settings and take note of your Project API key, we ne
 ![Create project anon key](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_project_anon_key.png)
 
 We need to add a new user, also taking note of the email and password to use later, this is found in the Authentication tab:
-![Create user](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_user_management.png)
+![Create user](blob/main/Bryntum%20Gantt%20Screenshots/supabase_user_management.png)
 
 Now select the SQL Editor tab:
 ![Create query](https://github.com/ritza-co/bryntum-supabase-carl/blob/main/Bryntum%20Gantt%20Screenshots/supabase_sql_insert.png)
