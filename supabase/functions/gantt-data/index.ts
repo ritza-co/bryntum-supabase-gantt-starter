@@ -7,7 +7,6 @@ import { corsHeaders } from '../_shared/cors.ts'
 
 console.log(`Function "gantt-data" up and running!`)
 
-
 Deno.serve(async (req: Request) => {
   // This is needed if you're planning to invoke your function from a browser.
   if (req.method === 'OPTIONS') {
@@ -38,11 +37,20 @@ Deno.serve(async (req: Request) => {
       data: { user },
     } = await supabaseClient.auth.getUser(token)
 
-    // And we can run queries in the context of our authenticated user
-    const { taskData, error } = await supabaseClient.from('tasks').select('*')
-    if (error) throw error
+    // Query the tasks table
+    const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*')
+    if (taskError) throw taskError
 
-    return new Response(JSON.stringify({ user, taskData }), {
+    // Query the dependencies table
+    const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*')
+    if (dependencyError) throw dependencyError
+    // Combine the results
+    const responseData = {
+      tasks: taskData,
+      dependencies: dependencyData,
+    }
+
+    return new Response(JSON.stringify({ user, responseData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
@@ -53,9 +61,3 @@ Deno.serve(async (req: Request) => {
     })
   }
 })
-
-// To invoke:
-// curl -i --location --request POST 'http://localhost:54321/functions/v1/select-from-table-with-auth-rls' \
-//   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24ifQ.625_WdcF3KHqz5amU0x2X5WWHP-OEs_4qj0ssLNHzTs' \
-//   --header 'Content-Type: application/json' \
-//   --data '{"name":"Functions"}'
