@@ -33,78 +33,40 @@ Now select the SQL Editor tab:
 Create a new SQL query and copy the following SQL commands: 
 ```sql
 CREATE TABLE tasks (
-    id SERIAL PRIMARY KEY,
-    parentId INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
-    name VARCHAR,
+    id INT PRIMARY KEY,
+    name VARCHAR(255),
+    percentDone INT,
     startDate DATE,
     endDate DATE,
-    effort FLOAT,
-    effortUnit VARCHAR DEFAULT 'hour',
-    duration FLOAT,
-    durationUnit VARCHAR DEFAULT 'day',
-    percentDone FLOAT DEFAULT 0,
-    schedulingMode VARCHAR DEFAULT 'Normal',
-    note TEXT,
-    constraintType VARCHAR,
-    constraintDate DATE,
-    manuallyScheduled BOOLEAN DEFAULT FALSE,
-    ignoreResourceCalendar BOOLEAN DEFAULT FALSE,
-    effortDriven BOOLEAN DEFAULT FALSE,
-    inactive BOOLEAN DEFAULT FALSE,
-    cls VARCHAR,
-    iconCls VARCHAR,
-    color VARCHAR,
-    parentIndex INTEGER DEFAULT 0,
-    expanded BOOLEAN DEFAULT FALSE,
-    calendar INTEGER,
-    deadline DATE
+    duration INT,
+    cost DECIMAL(10, 2),
+    rollup BOOLEAN,
+    expanded BOOLEAN,
+    showInTimeline BOOLEAN,
+    parentId INT,
+    FOREIGN KEY (parentId) REFERENCES tasks(id)
 );
 
-CREATE INDEX idx_parentId ON tasks(parentId);
-CREATE INDEX idx_calendar ON tasks(calendar);
-
-CREATE TABLE dependencies (
-    id SERIAL PRIMARY KEY,
-    fromEvent INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
-    toEvent INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
-    type INTEGER DEFAULT 2,
-    cls VARCHAR,
-    lag FLOAT DEFAULT 0,
-    lagUnit VARCHAR DEFAULT 'day',
-    active BOOLEAN DEFAULT TRUE,
-    fromSide VARCHAR,
-    toSide VARCHAR
-);
-
-CREATE INDEX idx_fromEvent ON dependencies(fromEvent);
-CREATE INDEX idx_toEvent ON dependencies(toEvent);
-
-INSERT INTO tasks (id, name, percentDone, startDate, endDate, parentId, expanded)
-VALUES
-    (1, 'Website Design', 30, '2024-05-20', '2024-06-14', NULL, TRUE),
-    (2, 'Contact designers', 100, '2024-05-24', '2024-05-26', 1, NULL),
-    (3, 'Create shortlist of three designers', 60, '2024-05-27', '2024-05-29', 1, NULL),
-    (4, 'Select & review final design', 0, '2024-05-30', '2024-06-03', 1, NULL),
-    (5, 'Apply design to web site', 0, '2024-06-04', '2024-06-07', 1, NULL),
-    (6, 'User feedback assessment', 0, '2024-06-10', '2024-06-14', 1, NULL),
-    (7, 'Setup Test Strategy', 0, '2024-06-17', '2024-06-28', NULL, TRUE),
-    (8, 'Hire QA staff', 0, '2024-06-17', '2024-06-19', 7, NULL),
-    (9, 'Write test specs', 0, '2024-06-19', '2024-06-21', 7, NULL),
-    (10, 'Unit tests', 0, '2024-06-22', '2024-06-24', 7, NULL),
-    (11, 'UI unit tests / individual screens', 0, '2024-06-25', '2024-06-28', 7, NULL),
-    (12, 'Application tests', 0, '2024-05-21', '2024-06-02', 7, NULL);
-
-INSERT INTO dependencies (id, fromEvent, toEvent)
-VALUES
-    (1, 2, 3),
-    (2, 3, 4),
-    (3, 4, 5),
-    (4, 5, 6),
-    (5, 1, 7),
-    (6, 8, 9),
-    (7, 9, 10),
-    (8, 10, 11),
-    (9, 11, 12);
+-- Insert data into the tasks table
+INSERT INTO tasks (id, name, percentDone, startDate, endDate, duration, cost, rollup, expanded, showInTimeline, parentId) VALUES
+(1000, 'Launch SaaS Product', 50, '2022-03-14', NULL, NULL, NULL, NULL, TRUE, NULL, NULL),
+(1, 'Setup web server', 50, '2022-03-14', '2022-03-23', 10, NULL, TRUE, TRUE, NULL, 1000),
+(11, 'Install Apache', 50, '2022-03-14', '2022-03-17', 3, 200, TRUE, NULL, NULL, 1),
+(12, 'Propsure firewall', 50, '2022-03-14', '2022-03-17', 3, 1000, TRUE, NULL, TRUE, 1),
+(13, 'Setup load balancer', 50, '2022-03-14', '2022-03-17', 3, 1200, TRUE, NULL, NULL, 1),
+(14, 'Propsure ports', 50, '2022-03-14', '2022-03-16', 2, 750, TRUE, NULL, NULL, 1),
+(15, 'Run tests', 0, '2022-03-21', '2022-03-23', 2, 5000, TRUE, NULL, NULL, 1),
+(2, 'Website Design', 60, '2022-03-23', '2022-04-13', NULL, NULL, TRUE, TRUE, NULL, 1000),
+(21, 'Contact designers', 70, '2022-03-23', '2022-03-30', 5, 500, TRUE, NULL, NULL, 2),
+(22, 'Create shortlist of three designers', 60, '2022-03-30', '2022-03-31', 1, 1000, TRUE, NULL, NULL, 2),
+(23, 'Select & review final design', 50, '2022-03-31', '2022-04-02', 2, 1000, TRUE, NULL, TRUE, 2),
+(24, 'Inform management about decision', 100, '2022-04-04', '2022-04-04', 0, 500, TRUE, NULL, NULL, 2),
+(25, 'Apply design to web site', 0, '2022-04-04', '2022-04-13', 7, 11000, TRUE, NULL, NULL, 2),
+(3, 'Setup Test Strategy', 20, '2022-03-14', NULL, NULL, NULL, NULL, TRUE, NULL, 1000),
+(31, 'Hire QA staff', 40, '2022-03-14', '2022-03-19', 5, 6000, NULL, NULL, NULL, 3),
+(33, 'Write test specs', 9, '2022-03-21', NULL, 5, NULL, NULL, TRUE, NULL, 3),
+(331, 'Unit tests', 20, '2022-03-21', '2022-04-02', 10, 7000, NULL, NULL, TRUE, 33),
+(332, 'UI unit tests / individual screens', 10, '2022-03-21', '2022-03-26', 5, 5000, NULL, NULL, TRUE, 33);
 ```
 You can then run the queries to create a `tasks` table and populate it with some data.
 
@@ -113,12 +75,13 @@ After those SQL commands have been executed, you can use your edge function to r
 Now that you have the `tasks` table, you need to enable RLS on it:
 ![Create table policy](https://github.com/user-attachments/assets/487fe445-d86b-4253-97a6-8a09449e3354)
 ![Create table policy form](https://github.com/user-attachments/assets/78d11caf-27e4-4d85-9708-227cba783832)
+
 The same process needs to be followed for every table you add and would like to access. This allows the user we created to read the data in the table, but will prevent any user that is not authenticated from doing so. This allows us to see RLS in action, users can be assigned policies that dictate their access to specific rows in our tables.
 Tables with RLS enabled and no policies assigned will not allow any user (other than superuser) access to the table data.
 
 And we are done with the project configuration for Supabase!
 
-## Supabase CLI
+## Use Supabase CLI to develop an Edge Function
 The Supabase CLI is a fantastic tool to help you manage your Supabase instances by allowing you to develop, deploy, handle migrations and generate native data types for your Supabase project. 
 You can access it within your shell environment using package managers for MacOS, Windows, Linux, and npm/Bun. For this walkthrough, we will assume you are using npm as your package manager, for any others, reference the [Supabase CLI Documentation](https://supabase.com/docs/guides/cli/getting-started?queryGroups=platform&platform=macos#installing-the-supabase-cli), but the basics will remain the same.
 For now we are going to focus purely on creating a new edge function.
@@ -270,7 +233,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 }
 ```
-Doing so allows us to use this edge function as a RESTful API which can be called using a URL that we will see once we have deployed the function to our Supabase project.
+Doing so allows you to use this edge function as a RESTful API which can be called using a URL that we will see once we have deployed the function to our Supabase project.
 
 Here you defined an async function that accepts an `id` parameter and uses the Supabase client to run the appropriate `select` query and then returns the response or throws an error.
 ```ts
