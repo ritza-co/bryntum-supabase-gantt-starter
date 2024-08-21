@@ -12,4 +12,3 @@ root.render(
     </Auth.UserContextProvider>
   </React.StrictMode>
 );
-

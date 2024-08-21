@@ -1,11 +1,10 @@
 import './App.scss';
-import './index.css'
 import { useState, useEffect } from 'react'
 import { supabase } from './utils/supabaseClient'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { BryntumGantt } from '@bryntum/gantt-react';
-import { gantt } from './ganttChart';
+import { ganttProps } from './GanttConfig';
 
 function App() {
   const [session, setSession] = useState(null)
@@ -32,7 +31,7 @@ function App() {
   else {
     return (
     <div style={{ height: '100%', justifyContent: 'space-around', alignContent: 'center'}}>
-      <BryntumGantt {...gantt} />
+      <BryntumGantt {...ganttProps} />
       <button
         onClick={() => supabase.auth.signOut()}
       >

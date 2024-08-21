@@ -1,4 +1,3 @@
-
 import { supabase } from './utils/supabaseClient'
 
 // Call our edge function
@@ -9,7 +8,7 @@ if (error) alert(error)
 // Extract the tasks and dependencies from the response
 const tasks = data.responseData.tasks;
 const dependencies = data.responseData.dependencies;
-const gantt = {
+const ganttProps = {
   viewPreset : 'weekAndDayLetter',
   barMargin  : 10,
   project : {
@@ -20,4 +19,4 @@ const gantt = {
   }
 };
 
-export { gantt};
+export { ganttProps };
