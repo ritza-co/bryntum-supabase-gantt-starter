@@ -442,6 +442,7 @@ export default App;
 Here's what this code does:
 
 - Presents the user with the Supabase React Auth UI login screen for authentication.
+
 - Directs authenticated users to the Gantt chart component. You'll configure this component in the next section.
 - Displays a button to sign out the current user.
 

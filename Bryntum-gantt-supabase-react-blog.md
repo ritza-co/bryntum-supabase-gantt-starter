@@ -497,5 +497,3 @@ Log in to the application with the credentials for the user you created when you
 ![View deployed function](https://github.com/user-attachments/assets/b8503aaa-bd51-4faf-9099-c2cc4bfa4553)
 
 You can sign out of the application by clicking the **Sign Out** button below the chart.
-
-
