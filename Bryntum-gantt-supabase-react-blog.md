@@ -1,461 +1,376 @@
 # How to use Supabase Edge Functions to build a Bryntum Gantt chart in React
 
-The [Bryntum Gantt](https://bryntum.com/products/gantt/) is a feature-rich and performant method of visualizing and scheduling tasks over a set period. 
-We will be working to integrate the quick and easy to use Brytum Gantt Chart with a Supabase Postgres database, while using Supabase Edge Functions and Auth with RLS(Row level security) enabled.
+The [Bryntum Gantt](https://bryntum.com/products/gantt/) is a feature-rich and performant component for creating interactive Gantt charts in web applications. 
 
-To follow this guide you will need a Supabase account, a running React app, Supabase project, and access to a Bryntum trial or license.
+In this post, we'll show you how to integrate Bryntum Gantt with a Supabase Postgres database. We'll use Supabase Edge Functions to interact with the database and Supabase Auth with row-level security (RLS) enabled for authorization.
 
-[Here](https://github.com/facebook/create-react-app) you can find some help setting up a React application
-You can sign in or create your Supabase account [here](https://supabase.com/dashboard/sign-in?returnTo=%2Fprojects)
-And sign up for a trial version of [Bryntum Gantt](https://bryntum.com/download/)
+## Prerequisites
 
-## Supabase Configuration
-For us to set up the Supabase Edge Functions, we first need to get a few things ready!
+To follow along with this guide, you'll need:
 
-Ensure you have created a project inside your organization:
-![Create project](https://github.com/user-attachments/assets/79e8fe6a-7e92-419a-bbca-3419f8768d11)
+- A Supabase account. Create one [here](https://supabase.com/dashboard/sign-in?returnTo=%2Fprojects).
+- A running React app. Use our quickstart guide [here](https://bryntum.com/products/gantt/docs/guide/Gantt/quick-start/react) to set up a Bryntum Gantt React project.
+- A Bryntum Gantt license, or [sign up for a free trial version](https://bryntum.com/download/).
 
-Or create a new one if you don't:
-![Create project form](https://github.com/user-attachments/assets/ff8bd9bc-5451-4b58-84aa-afb9c1e2c4cf)
+## Create a Supabase project
 
-Once you have created your project, open the project settings and take note of your Reference ID, you will need this later:
-![Create project ref](https://github.com/user-attachments/assets/1de89210-f2c5-4b15-8678-415824b1a712)
+In your Supabase organization dashboard, click **New project** to create a new project.
 
-Then select API in project settings and take note of your Project API key, we need the one labeled `anon` `public` :
-![Create project anon key](https://github.com/user-attachments/assets/c7751490-97d7-4d63-bf6f-f05f62268e34)
+![Create project](img/supabase_create_project.png)
 
-You now need to add a new user, also taking note of the email and password to use later, this is found in the Authentication tab:
-![Create user](https://github.com/user-attachments/assets/17e29527-ee0e-49f8-9687-80453c2ee20d)
+Give your project a name, set a password for the database, select a region, and click **Create new project**.
 
-Now select the SQL Editor tab:
-![Create query](https://github.com/user-attachments/assets/fda95373-3113-4a5f-90f4-9dad43c62a36)
+![Create project form](img/supabase_create_project_form.png)
 
-Create a new SQL query and copy the following SQL commands: 
+We'll need a reference ID and API key for the new project.
+
+Find the reference ID in the project settings under **General**.
+
+![Create project ref](img/supabase_ref_id.png)
+
+To find the API key, select **API** from the sidebar. We need the `anon` `public` project API key.
+
+![Create project anon key](img/supabase_anon.png)
+
+## Create a new Supabase user
+
+Navigate to the **Authentication** tab and click **Add user** to create a new user.
+
+![Create user](img/supabase_demo_user.png)
+
+Take note of the new user's email and password to use later.
+
+## Create a new database table
+
+Navigate to the SQL Editor tab.
+
+![Create query](img/supabase_sql_editor.png)
+
+Click **+ New query** from the sidebar and paste the following SQL commands into the editor:
+
 ```sql
 CREATE TABLE tasks (
-    id SERIAL PRIMARY KEY,
-    parentId INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
-    name VARCHAR,
-    startDate DATE,
-    endDate DATE,
-    effort FLOAT,
-    effortUnit VARCHAR DEFAULT 'hour',
-    duration FLOAT,
-    durationUnit VARCHAR DEFAULT 'day',
-    percentDone FLOAT DEFAULT 0,
-    schedulingMode VARCHAR DEFAULT 'Normal',
-    note TEXT,
-    constraintType VARCHAR,
-    constraintDate DATE,
-    manuallyScheduled BOOLEAN DEFAULT FALSE,
-    ignoreResourceCalendar BOOLEAN DEFAULT FALSE,
-    effortDriven BOOLEAN DEFAULT FALSE,
-    inactive BOOLEAN DEFAULT FALSE,
-    cls VARCHAR,
-    iconCls VARCHAR,
-    color VARCHAR,
-    parentIndex INTEGER DEFAULT 0,
-    expanded BOOLEAN DEFAULT FALSE,
-    calendar INTEGER,
-    deadline DATE
+    id INT PRIMARY KEY,
+    name VARCHAR(255),
+    percentDone INT,
+    startDate DATE,
+    endDate DATE,
+    duration INT,
+    cost DECIMAL(10, 2),
+    rollup BOOLEAN,
+    expanded BOOLEAN,
+    showInTimeline BOOLEAN,
+    parentId INT,
+    FOREIGN KEY (parentId) REFERENCES tasks(id)
 );
 
-CREATE INDEX idx_parentId ON tasks(parentId);
-CREATE INDEX idx_calendar ON tasks(calendar);
-
-CREATE TABLE dependencies (
-    id SERIAL PRIMARY KEY,
-    fromEvent INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
-    toEvent INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
-    type INTEGER DEFAULT 2,
-    cls VARCHAR,
-    lag FLOAT DEFAULT 0,
-    lagUnit VARCHAR DEFAULT 'day',
-    active BOOLEAN DEFAULT TRUE,
-    fromSide VARCHAR,
-    toSide VARCHAR
-);
-
-CREATE INDEX idx_fromEvent ON dependencies(fromEvent);
-CREATE INDEX idx_toEvent ON dependencies(toEvent);
-
-INSERT INTO tasks (id, name, percentDone, startDate, endDate, parentId, expanded)
-VALUES
-    (1, 'Website Design', 30, '2024-05-20', '2024-06-14', NULL, TRUE),
-    (2, 'Contact designers', 100, '2024-05-24', '2024-05-26', 1, NULL),
-    (3, 'Create shortlist of three designers', 60, '2024-05-27', '2024-05-29', 1, NULL),
-    (4, 'Select & review final design', 0, '2024-05-30', '2024-06-03', 1, NULL),
-    (5, 'Apply design to web site', 0, '2024-06-04', '2024-06-07', 1, NULL),
-    (6, 'User feedback assessment', 0, '2024-06-10', '2024-06-14', 1, NULL),
-    (7, 'Setup Test Strategy', 0, '2024-06-17', '2024-06-28', NULL, TRUE),
-    (8, 'Hire QA staff', 0, '2024-06-17', '2024-06-19', 7, NULL),
-    (9, 'Write test specs', 0, '2024-06-19', '2024-06-21', 7, NULL),
-    (10, 'Unit tests', 0, '2024-06-22', '2024-06-24', 7, NULL),
-    (11, 'UI unit tests / individual screens', 0, '2024-06-25', '2024-06-28', 7, NULL),
-    (12, 'Application tests', 0, '2024-05-21', '2024-06-02', 7, NULL);
-
-INSERT INTO dependencies (id, fromEvent, toEvent)
-VALUES
-    (1, 2, 3),
-    (2, 3, 4),
-    (3, 4, 5),
-    (4, 5, 6),
-    (5, 1, 7),
-    (6, 8, 9),
-    (7, 9, 10),
-    (8, 10, 11),
-    (9, 11, 12);
+-- Insert data into the tasks table
+INSERT INTO tasks (id, name, percentDone, startDate, endDate, duration, cost, rollup, expanded, showInTimeline, parentId) VALUES
+(1000, 'Launch SaaS Product', 50, '2022-03-14', NULL, NULL, NULL, NULL, TRUE, NULL, NULL),
+(1, 'Setup web server', 50, '2022-03-14', '2022-03-23', 10, NULL, TRUE, TRUE, NULL, 1000),
+(11, 'Install Apache', 50, '2022-03-14', '2022-03-17', 3, 200, TRUE, NULL, NULL, 1),
+(12, 'Propsure firewall', 50, '2022-03-14', '2022-03-17', 3, 1000, TRUE, NULL, TRUE, 1),
+(13, 'Setup load balancer', 50, '2022-03-14', '2022-03-17', 3, 1200, TRUE, NULL, NULL, 1),
+(14, 'Propsure ports', 50, '2022-03-14', '2022-03-16', 2, 750, TRUE, NULL, NULL, 1),
+(15, 'Run tests', 0, '2022-03-21', '2022-03-23', 2, 5000, TRUE, NULL, NULL, 1),
+(2, 'Website Design', 60, '2022-03-23', '2022-04-13', NULL, NULL, TRUE, TRUE, NULL, 1000),
+(21, 'Contact designers', 70, '2022-03-23', '2022-03-30', 5, 500, TRUE, NULL, NULL, 2),
+(22, 'Create shortlist of three designers', 60, '2022-03-30', '2022-03-31', 1, 1000, TRUE, NULL, NULL, 2),
+(23, 'Select & review final design', 50, '2022-03-31', '2022-04-02', 2, 1000, TRUE, NULL, TRUE, 2),
+(24, 'Inform management about decision', 100, '2022-04-04', '2022-04-04', 0, 500, TRUE, NULL, NULL, 2),
+(25, 'Apply design to web site', 0, '2022-04-04', '2022-04-13', 7, 11000, TRUE, NULL, NULL, 2),
+(3, 'Setup Test Strategy', 20, '2022-03-14', NULL, NULL, NULL, NULL, TRUE, NULL, 1000),
+(31, 'Hire QA staff', 40, '2022-03-14', '2022-03-19', 5, 6000, NULL, NULL, NULL, 3),
+(33, 'Write test specs', 9, '2022-03-21', NULL, 5, NULL, NULL, TRUE, NULL, 3),
+(331, 'Unit tests', 20, '2022-03-21', '2022-04-02', 10, 7000, NULL, NULL, TRUE, 33),
+(332, 'UI unit tests / individual screens', 10, '2022-03-21', '2022-03-26', 5, 5000, NULL, NULL, TRUE, 33);
 ```
-You can then run the queries to create a `tasks` table and populate it with some data.
 
-After those SQL commands have been executed, you can use your edge function to retrieve this data from within your React application.
+Click **Run** to run the queries, and a `tasks` table will be created and populated with some data.
 
-Now that you have the `tasks` table, you need to enable RLS on it:
-![Create table policy](https://github.com/user-attachments/assets/487fe445-d86b-4253-97a6-8a09449e3354)
-![Create table policy form](https://github.com/user-attachments/assets/78d11caf-27e4-4d85-9708-227cba783832)
-The same process needs to be followed for every table you add and would like to access. This allows the user we created to read the data in the table, but will prevent any user that is not authenticated from doing so. This allows us to see RLS in action, users can be assigned policies that dictate their access to specific rows in our tables.
-Tables with RLS enabled and no policies assigned will not allow any user (other than superuser) access to the table data.
+## Enable RLS on the new table
 
-And we are done with the project configuration for Supabase!
+Let's enable RLS on the new table. In the **Authentication** tab, select **Policies** from the sidebar. Click **Enable RLS** for the new table.
 
-## Supabase CLI
-The Supabase CLI is a fantastic tool to help you manage your Supabase instances by allowing you to develop, deploy, handle migrations and generate native data types for your Supabase project. 
-You can access it within your shell environment using package managers for MacOS, Windows, Linux, and npm/Bun. For this walkthrough, we will assume you are using npm as your package manager, for any others, reference the [Supabase CLI Documentation](https://supabase.com/docs/guides/cli/getting-started?queryGroups=platform&platform=macos#installing-the-supabase-cli), but the basics will remain the same.
-For now we are going to focus purely on creating a new edge function.
+![Create table policy](img/supabase_enable_policy.png)
 
-To create a new Supabase project, run the following from your shell inside the directory you want your project to live:
-```shell
+Now click **Create policy**. In the dialog that opens, give the new policy a name and click **Save policy**
+
+![Create table policy form](img/supabase_create_policy.png)
+
+This policy allows only authenticated users to read the data in the table. Users can be assigned policies that dictate their access to specific rows in tables.
+
+You'll need to follow the same process for every table you add that you would like authenticated users to access. Tables with RLS enabled and no policies assigned will not allow any user except the superuser to access the table data.
+
+## Use Supabase CLI to develop an Edge Function
+
+You can use the Supabase CLI to manage instances, develop and deploy projects, handle migrations, and generate native data types. 
+
+Access the Supabase CLI in your shell environment using package managers for macOS, Windows, Linux, and npm or Bun. This guide assumes you're using npm as your package manager. For other package managers, consult the [Supabase CLI documentation](https://supabase.com/docs/guides/cli/getting-started?queryGroups=platform&platform=macos#installing-the-supabase-cli), but the basics will remain the same.
+
+Let's use the Supabase CLI to create a new Edge Function.
+
+To create a new Supabase project, run the following command from your terminal inside the directory you want your project to live:
+
+```sh
 npx supabase init
 ```
 
-Then we can create our new edge function:
-```shell
+Now create a new Edge Function:
+
+```sh
 npx supabase functions new tasks-rest
 ```
 
-Open up the `index.ts` file that was just created, clear everything and add the following:
+Open the `functions/tasks-rest/index.ts` file that was just created, clear everything, and add the following:
+
 ```ts
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 }
 
 interface Task {
-  name: string
-  status: number
+  name: string
+  status: number
 }
+```
 
+You configured CORS headers to allow cross-site traffic, authorization headers, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods. This allows us to use this Edge Function as a RESTful API that can be called using the URL. You will see this once you have deployed the function to your Supabase project.
+
+Now add the following code:
+
+```ts
 async function getTask(supabaseClient: SupabaseClient, id: string) {
-  const { data: task, error } = await supabaseClient.from('tasks').select('*').eq('id', id)
-  if (error) throw error
-
-  return new Response(JSON.stringify({ task }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
+  const { data: task, error } = await supabaseClient.from('tasks').select('*').eq('id', id)
+  if (error) throw error 
+  
+  return new Response(JSON.stringify({ task }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  })
 }
+```
 
+Here you defined an async function that accepts an `id` parameter and uses the Supabase client to run the appropriate `select` query and returns the response or throws an error.
+
+Add methods for all the verbs in a request:
+
+```ts
 async function getAllTasks(supabaseClient: SupabaseClient) {
-  // Query the tasks table
-  const { data: tasks, error: taskError } = await supabaseClient.from('tasks').select('*')
+  // Query the tasks table
+  const { data: tasks, error: taskError } = await supabaseClient.from('tasks').select('*')
 
-  if (taskError) throw taskError
+  if (taskError) throw taskError
 
-  return new Response(JSON.stringify({ tasks }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
+  return new Response(JSON.stringify({ tasks }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  })
 }
 
 async function deleteTask(supabaseClient: SupabaseClient, id: string) {
-  const { error } = await supabaseClient.from('tasks').delete().eq('id', id)
-  
-  if (error) throw error
+  const { error } = await supabaseClient.from('tasks').delete().eq('id', id)
+  
+  if (error) throw error
 
-  return new Response(JSON.stringify({}), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
+  return new Response(JSON.stringify({}), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  })
 }
 
 async function updateTask(supabaseClient: SupabaseClient, id: string, task: Task) {
-  const { error } = await supabaseClient.from('tasks').update(task).eq('id', id)
+  const { error } = await supabaseClient.from('tasks').update(task).eq('id', id)
 
-  if (error) throw error
+  if (error) throw error
 
-  return new Response(JSON.stringify({ task }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
+  return new Response(JSON.stringify({ task }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  })
 }
 
 async function createTask(supabaseClient: SupabaseClient, task: Task) {
-  const { error } = await supabaseClient.from('tasks').insert(task)
+  const { error } = await supabaseClient.from('tasks').insert(task)
 
-  if (error) throw error
+  if (error) throw error
 
-  return new Response(JSON.stringify({ task }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
-}
-
-Deno.serve(async (req) => {
-  const { url, method } = req
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
-  
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    ) 
-
-    const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-    const taskPattern = new URLPattern({ pathname: '/tasks-rest/:id' })
-    const matchingPath = taskPattern.exec(url)
-    const id = matchingPath ? matchingPath.pathname.groups.id : null
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser(token)
-  
-    let task = null
-    
-    if (method === 'POST' || method === 'PUT') {
-      const body = await req.json()
-      task = body.task
-    }
-
-    switch (true) {
-      case id && method === 'GET':
-        return getTask(supabaseClient, id as string)
-      case id && method === 'PUT':
-        return updateTask(supabaseClient, id as string, task)
-      case id && method === 'DELETE':
-        return deleteTask(supabaseClient, id as string)
-      case method === 'POST':
-        return createTask(supabaseClient, task)
-      case method === 'GET':
-        return getAllTasks(supabaseClient)
-      default:
-        return new Response(JSON.stringify({ user }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        })
-    }
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
-  }
-})
-```
-To explain what is happening in this edge function, let's break down some of the blocks of code and explain their features and purpose.
-
-Here we are configuring our CORS headers to allow cross-site traffic, authorization headers, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods.
-```ts
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
-}
-```
-Doing so allows us to use this edge function as a RESTful API which can be called using a URL that we will see once we have deployed the function to our Supabase project.
-
-Here you defined an async function that accepts an `id` parameter and uses the Supabase client to run the appropriate `select` query and then returns the response or throws an error.
-```ts
-async function getTask(supabaseClient: SupabaseClient, id: string) {
-  const { data: task, error } = await supabaseClient.from('tasks').select('*').eq('id', id)
-  if (error) throw error 
-  
-  return new Response(JSON.stringify({ task }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
-}
-```
-There are methods for all the verbs in a request:
-```ts
-async function getAllTasks(supabaseClient: SupabaseClient) {
-  const { data: tasks, error: taskError } = await supabaseClient.from('tasks').select('*')
-  if (taskError) throw taskError
-  
-  return new Response(JSON.stringify({ tasks }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
+  return new Response(JSON.stringify({ task }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  })
 }
 ```
 
-You start the [Deno](https://supabase.com/blog/edge-runtime-self-hosted-deno-functions) runtime that serves the function with:
+Next, add the code to start the [Deno](https://supabase.com/blog/edge-runtime-self-hosted-deno-functions) runtime and set up the Supabase client using the current user authorization headers:
+
 ```ts
 Deno.serve(async (req) => {
-
-}
-```
-
-Then you set up Supabase Client using the current user authorization headers:
-```ts
-const supabaseClient = createClient(
-  // Supabase API URL - env var exported by default.
-  Deno.env.get('SUPABASE_URL') ?? '',
-  // Supabase API ANON KEY - env var exported by default.
-  Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-  // Create client with Auth context of the user that called the function.
-  // This way your row-level-security (RLS) policies are applied.
-  {
-	global: {
-	  headers: { Authorization: req.headers.get('Authorization')! },
-	},
+  const { url, method } = req
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
-)
+  
+  try {
+    const supabaseClient = createClient(
+      // Supabase API URL - env var exported by default.
+      Deno.env.get('SUPABASE_URL') ?? '',
+      // Supabase API ANON KEY - env var exported by default.
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      // Create client with Auth context of the user that called the function.
+      // This way your row-level-security (RLS) policies are applied.
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    )
 ```
-This uses environment variables and the `Authorization` header from the request to get the values to create the context for the client.
 
-Here you got the bearer token for authorization, set up a URL pattern to parse the incoming request, and then used the Supabase Auth library to authorize the current user based on the bearer token:
+Here you use environment variables and the `Authorization` header from the request to get the values to create the context for the client.
+
+Finally, let's add a request handler function: # NOTE: this 'let's' makes me nervous
+
 ```ts
-const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-const taskPattern = new URLPattern({ pathname: '/tasks-rest/:id' })
-const matchingPath = taskPattern.exec(url)
-const id = matchingPath ? matchingPath.pathname.groups.id : null
-const {
-  data: { user },
-} = await supabaseClient.auth.getUser(token)
-```
+    const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
+    const taskPattern = new URLPattern({ pathname: '/tasks-rest/:id' })
+    const matchingPath = taskPattern.exec(url)
+    const id = matchingPath ? matchingPath.pathname.groups.id : null
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser(token)
 
-Then you added the main logic that calls the relevant function based on the given verb in a request:
-```ts
-if (method === 'POST' || method === 'PUT') {
-  const body = await req.json()
-  task = body.task
-}
+    let task = null
 
-switch (true) {
-  case id && method === 'GET':
-	return getTask(supabaseClient, id as string)
-  case id && method === 'PUT':
-	return updateTask(supabaseClient, id as string, task)
-  case id && method === 'DELETE':
-	return deleteTask(supabaseClient, id as string)
-  case method === 'POST':
-	return createTask(supabaseClient, task)
-  case method === 'GET':
-	return getAllTasks(supabaseClient)
-  default:
-	return new Response(JSON.stringify({ user }), {
-	  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	  status: 200,
-	})
-}
-} catch (error) {
-return new Response(JSON.stringify({ error: error.message }), {
-  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  status: 400,
+    if (method === 'POST' || method === 'PUT') {
+      const body = await req.json()
+      task = body.task
+    }
+
+    switch (true) {
+      case id && method === 'GET':
+        return getTask(supabaseClient, id as string)
+      case id && method === 'PUT':
+        return updateTask(supabaseClient, id as string, task)
+      case id && method === 'DELETE':
+        return deleteTask(supabaseClient, id as string)
+      case method === 'POST':
+        return createTask(supabaseClient, task)
+      case method === 'GET':
+        return getAllTasks(supabaseClient)
+      default:
+        return new Response(JSON.stringify({ user }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
+    }
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    })
+  }
 })
 ```
 
-Now that you have successfully created your edge function, you can deploy it to your Supabase project:
-```shell
-supabase functions deploy task-rest --project-ref <Project_Ref_Id>
-```
-These are the values that can be found in your Supabase project API settings.
+This function gets the bearer token for authorization, sets up a URL pattern to parse the incoming request, and then uses the Supabase Auth library to authorize the current user based on the bearer token. It then calls the relevant function based on the given verb in a request.
 
+Generate the CLI access token by logging in:
 
-If you now navigate to your Supabase instance, you should see your new edge function deployed:
-![View deployed function](https://github.com/user-attachments/assets/7f8b39e1-a67d-403b-821d-5b35716ce493)
-
-Here you can see the URL that can be used to access your edge function. Based on the verb in your request, a method will be called that performs the operation and returns a result. These functions can be set up in many possible configurations and can easily be manipulated into performing a variety of tasks or processing using any table or combination thereof.
-
-Creating edge functions is fairly simple and has huge potential for streamlining the way you retrieve and process data from your database. 
-
-You now have successfully created a new table, edge function, and set up authorized access to the data in that table to which by applying the appropriate policy. 
-Edge functions run server-side in your Suipabase instance, and enforce the security policies you stipulated, this has given you secure, low-latency access to the data you have stored in your Postgres database.
-
-
-## React Application
-Now that you have your database and edge function created, you can begin adding the Brytum Gantt Chart to your React application. If you do not have an existing React application ready, [these](https://bryntum.com/products/gantt/docs/guide/Gantt/quick-start/react) instructions should get you started quickly. You will also need to make sure you have a paid or trial license for Bryntum to be able to access the registry.
-
-Inside the directory of your new or existing application, e.g. `C:\Users\<user>\source\repos\bryntum-supabase\bryntum-gantt-react-supabase-starter`, you will first need to configure **npm** to be able to download the Bryntum packages in the `@brytum` scope from the Bryntum registry:
-```shell
-npm config set "@bryntum:registry=https://npm.bryntum.com"
+```sh
+npx supabase login
 ```
 
-Check that npm has been configured correctly with:
-```shell
-npm config list
-```
-You should see the following in the response:
-```shell
-@bryntum:registry = "https://npm.bryntum.com"
-```
-Now login to Bryntum:
-```shell
-npm login --registry=https://npm.bryntum.com
-```
-You can then enter your credentials, in this example we are using the trial versions, the username is what you used to set up your trial account. 
-```shell
-Username: user..yourdomain.com
-Password: trial
-Email: (this IS public) user@yourdomain.com
-```
-The process remains the same for a fully licensed version. You just need to ensure that you use the correct credentials to access the full version.
+Now you can deploy the Edge Function to your Supabase project:
 
-Now that you have configured npm and signed into your Brytum account, we need to install the `sass` package if you do not already have it:
+```sh
+npx supabase functions deploy tasks-rest --project-ref <Project_Ref_Id>
+```
+
+Replace `<Project_Ref_Id>` with your Supabase project reference ID.
+
+Navigate to your Supabase instance and you should see your new Edge Function deployed:
+
+![View deployed function](img/supabase_deployed.png)
+
+Here you can see the URL you can use to access your Edge Function. 
+
+Edge functions run server-side in your Supabase instance and enforce the security policies you stipulate to give you secure, low-latency access to the data stored in your Postgres database. Edge Functions can be configured in various ways and are easily adapted to perform a range of tasks or processes using any table or combination of tables.
+
+
+## Add Bryntum Gantt to the React application
+
+Now you can add Bryntum Gantt to your React application. If you don't have an existing React application ready, [these](https://bryntum.com/products/gantt/docs/guide/Gantt/quick-start/react) instructions should get you started quickly. 
+
+First, in your application's directory, configure npm to download the Bryntum packages in the `@brytum` scope from the Bryntum registry by following the instructions in our documentation [here](https://bryntum.com/products/gantt/docs/guide/Gantt/npm-repository).
+
+
+Bryntum Gantt uses [Sass](https://sass-lang.com/) to apply CSS rules. Install the `sass` package now if you don't already have it:
+
 ```shell
 npm install sass
 ```
-Bryntum Gantt uses [Sass](https://sass-lang.com/) to apply css rules to the generated graph.
 
-You can then install the Bryntum React package:
+Install the Bryntum React package:
+
 ```shell 
-npm install @bryntum/gantt@npm:@bryntum/gantt-trial @bryntum/gantt-react
+npm install @bryntum/gantt @bryntum/gantt-react
 ```
-And the Supabase React Auth UI:
-```shell
+
+Finally, install the Supabase React Auth UI:
+
+```sh
 npm install @supabase/supabase-js @supabase/auth-ui-react @supabase/auth-ui-shared
 ```
 
-That is all the setup that our React application requires to be able to use the Supabase login component and Bryntum Gantt Chart. Next you are going to set up the connection to your Supabase edge function.
+Your application is now set up to use the Supabase login component and Bryntum Gantt.
 
-Create a new directory for some utilities:
-```shell
+## Connect to the Supabase Edge Function
+
+Create a new utilities directory:
+
+```sh
 mkdir utils
 ```
-Navigate into your new directory:
-```shell
+
+Navigate into the new directory:
+
+```sh
 cd utils
 ```
-Add a new JavaScript file named `supabaseClient.js` inside the directory and paste in the following:
+
+Add a new JavaScript file named `supabaseClient.js` inside the directory and paste the following into it, replacing `<Project_Ref_Id>` and `<Supabase_Anonymous_Key>` with your Supabase values:
+
 ```js
 import { createClient } from '@supabase/supabase-js'
 
 export const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL ?? 'https://<Project_Ref_Id>.supabase.co',
-  process.env.REACT_APP_SUPABASE_ANON_KEY ??
-    '<Supabase_Anonymous_Key>'
+  process.env.REACT_APP_SUPABASE_URL ?? 'https://<Project_Ref_Id>.supabase.co',
+  process.env.REACT_APP_SUPABASE_ANON_KEY ??
+    '<Supabase_Anonymous_Key>'
 )
 ```
-Replace `<Project_Ref_Id>` and `<Supabase_Anonymous_Key>`  with the values we took note of earlier. This is used to configure the connection client to your Supabase project and will be used for all connections to the Supabase instance. This client will be used be used to call our edge functions.
+
+Here you configured the client connection to the Supabase project, which will be used for all interactions with the Supabase instance. You'll use this client to call our edge function/s.
 
 Navigate back to the root of your React project:
+
 ```shell
 cd ../..
 ```
-Inside your `src` directory:
+
+Change to the `src` directory:
+
 ```shell
 cd src
 ```
-Find your `index.js` file and replace its contents with:
+
+Find your `main.jsx` file and replace its contents with the following:
+
 ```js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -465,16 +380,18 @@ import { supabase } from './utils/supabaseClient'
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
-    <Auth.UserContextProvider supabaseClient={supabase}>
-      <App />
-    </Auth.UserContextProvider>
-  </React.StrictMode>
+  <React.StrictMode>
+    <Auth.UserContextProvider supabaseClient={supabase}>
+      <App />
+    </Auth.UserContextProvider>
+  </React.StrictMode>
 );
 ```
-This imports the `supabaseClient` we just created, and adds the Supabase React Auth UI as our user context provider and launches the app.
 
-Still inside your `src` directory, replace everything inside your `App.js` file with:
+This code imports the `supabaseClient` you created, adds the Supabase React Auth UI as the user context provider, and launches the app.
+
+Still in your `src` directory, replace everything in the `App.jsx` file with the following:
+
 ```js
 import './App.scss';
 import './index.css'
@@ -486,92 +403,97 @@ import { BryntumGantt } from '@bryntum/gantt-react';
 import { gantt } from './ganttChart';
 
 function App() {
-  const [session, setSession] = useState(null)
+  const [session, setSession] = useState(null)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
   
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
-  if (!session) {
-    return (<div style={{display: 'flex',  justifyContent:'center', alignItems:'center', height: '100vh'}}>
-            <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />
-          </div>)
-  }
-  else {
-    return (
-    <div style={{ height: '100%', justifyContent: 'space-around', alignContent: 'center'}}>
-      <BryntumGantt {...gantt} />
-      <button
-        onClick={() => supabase.auth.signOut()}
-      >
-        Sign out
-      </button>
-    </div>)
-  }
+  if (!session) {
+    return (<div style={{display: 'flex',  justifyContent:'center', alignItems:'center', height: '100vh'}}>
+            <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />
+          </div>)
+  }
+  else {
+    return (
+    <div style={{ height: '100%', justifyContent: 'space-around', alignContent: 'center'}}>
+      <BryntumGantt {...gantt} />
+      <button
+        onClick={() => supabase.auth.signOut()}
+      >
+        Sign out
+      </button>
+    </div>)
+  }
 }
 
 export default App;
 ```
-This handles displaying the Supabase React Auth UI login screen, and once a user has successfully logged in, we will show our Gantt chart component which we will be configuring next. It will also display a button to sign out the current user to showcase the integration of the Auth UI into your application.
 
-Still in our `src` directory, add a `ganttChart.js` file and add:
+Here's what this code does:
+
+- Presents the user with the Supabase React Auth UI login screen for authentication.
+- Directs authenticated users to the Gantt chart component. You'll configure this component in the next section.
+- Displays a button to sign out the current user.
+
+Still in the `src` directory, add a `GanttConfig.js` file containing the following code:
+
 ```js
 import { supabase } from './utils/supabaseClient'  
 
 // Call our edge function
 const { data, error } = await supabase.functions.invoke("task-rest", {"name":"Functions"})
 if (error) alert(error)
-  console.log(data.responseData)
+  console.log(data.responseData)
 
 const tasks = data.responseData.tasks;
 
 const gantt = {
-  viewPreset : 'weekAndDayLetter',
-  barMargin  : 10,
-  project : {
-      tasks: tasks,
-      autoLoad: true,
-      autoSetConstraints : true
-  }
+  viewPreset : 'weekAndDayLetter',
+  barMargin  : 10,
+  project : {
+      tasks: tasks,
+      autoLoad: true,
+      autoSetConstraints : true
+  }
 };
 
 export { gantt};
 ```
-Here you invoke the edge function we created earlier using the Supabase Client, and then unpack the response into our Gantt components' properties and return these properties to the calling component to be used to display the Gantt chart.
 
-Now that we have configured our Gantt chart, we can run our application with:
-```shell
-npm start
-```
+Here you invoke the edge function you previously created using the Supabase Client, unpack the response into the Gantt components' properties, and return these properties to the calling component to be used to display the Gantt chart. #NOTE: this sentence is a bit wak
+
+Now you can run the application with:
 
 ```shell
-Compiled successfully!
-
-You can now view bryntum-gantt-react-supabase-starter in the browser.
-
-  Local:            http://localhost:3000
-  On Your Network:  http://192.168.1.131:3000
-
-Note that the development build is not optimized.
-To create a production build, use npm run build.
-
-webpack compiled successfully
+npm run dev
 ```
 
-Visit the URL of your application in your browser, you will be greeted with your new login screen that you created using the Supabase React Auth UI:
+You should receive a response similar to the following:
+
+```shell
+VITE v5.4.2  ready in 215 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+```
+
+Visit the URL of the application in your browser, and you should see the login screen you created using the Supabase React Auth UI:
+
 ![View login component](https://github.com/user-attachments/assets/b968fb03-7568-4ee0-bc7f-db90b4fc79dc)
-Once you have logged in with the user you created while setting up your Supabase project, you will see your new Bryntum Gantt Chart created by querying the data from your edge function:
-![View deployed function](https://github.com/user-attachments/assets/b8503aaa-bd51-4faf-9099-c2cc4bfa4553)
-You can sign out again by clicking on the `Sign Out` button below the chart.
 
-Awesome! by now you should have successfully integrated a Bryntum Gantt chart into your React application that uses a Supabase backend, hosting an edge function that performs CRUD operations on a Postgres database table.
-This tutorial only began to explore the power of these two tools working together. I highly encourage you to dive deeper into each projects documentation to learn more.
+Log in to the application with the credentials for the user you created when you set up the Supabase project. You should see the new Bryntum Gantt chart created by querying the data from your edge function:
+
+![View deployed function](https://github.com/user-attachments/assets/b8503aaa-bd51-4faf-9099-c2cc4bfa4553)
+
+You can sign out of the application by clicking the **Sign Out** button below the chart.

@@ -139,7 +139,7 @@ interface Task {
 }
 ```
 
-We configure CORS headers to allow cross-site traffic, authorization headers, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods. This allows us to use this Edge Function as a RESTful API that can be called using the URL we will see once we have deployed the function to our Supabase project.
+You configured CORS headers to allow cross-site traffic, authorization headers, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods. This allows us to use this Edge Function as a RESTful API that can be called using the URL. You will see this once you have deployed the function to your Supabase project.
 
 Now add the following code:
 
@@ -155,7 +155,7 @@ async function getTask(supabaseClient: SupabaseClient, id: string) {
 }
 ```
 
-Here we define an async function that accepts an `id` parameter and uses the Supabase client to run the appropriate `select` query and returns the response or throws an error.
+Here you defined an async function that accepts an `id` parameter and uses the Supabase client to run the appropriate `select` query and returns the response or throws an error.
 
 Add methods for all the verbs in a request:
 
@@ -231,9 +231,9 @@ Deno.serve(async (req) => {
     )
 ```
 
-Here we use environment variables and the `Authorization` header from the request to get the values to create the context for the client.
+Here you use environment variables and the `Authorization` header from the request to get the values to create the context for the client.
 
-Finally, let's add a request handler function:
+Finally, let's add a request handler function: # NOTE: this 'let's' makes me nervous
 
 ```ts
     const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
@@ -299,7 +299,7 @@ Navigate to your Supabase instance and you should see your new Edge Function dep
 
 Here you can see the URL you can use to access your Edge Function. 
 
-Edge functions run server-side in your Supabase instance and enforce security policies you stipulate to give you secure, low-latency access to the data stored in your Postgres database. Edge Functions can be configured in various ways and easily adapted to perform a range of tasks or processes using any table or combination of tables.
+Edge functions run server-side in your Supabase instance and enforce the security policies you stipulate to give you secure, low-latency access to the data stored in your Postgres database. Edge Functions can be configured in various ways and are easily adapted to perform a range of tasks or processes using any table or combination of tables.
 
 
 ## Add Bryntum Gantt to the React application
@@ -355,7 +355,7 @@ export const supabase = createClient(
 )
 ```
 
-Here we configure the client connection to the Supabase project, which will be used for all interactions with the Supabase instance. We'll use the client to call our edge functions.
+Here you configured the client connection to the Supabase project, which will be used for all interactions with the Supabase instance. You'll use this client to call our edge function/s.
 
 Navigate back to the root of your React project:
 
@@ -369,7 +369,7 @@ Change to the `src` directory:
 cd src
 ```
 
-Find your `index.js` file and replace its contents with the following:
+Find your `main.jsx` file and replace its contents with the following:
 
 ```js
 import React from 'react';
@@ -388,9 +388,9 @@ root.render(
 );
 ```
 
-This code imports the `supabaseClient` we created, adds the Supabase React Auth UI as the user context provider, and launches the app.
+This code imports the `supabaseClient` you created, adds the Supabase React Auth UI as the user context provider, and launches the app.
 
-Still in your `src` directory, replace everything in the `App.js` file with the following:
+Still in your `src` directory, replace everything in the `App.jsx` file with the following:
 
 ```js
 import './App.scss';
@@ -442,10 +442,11 @@ export default App;
 Here's what this code does:
 
 - Presents the user with the Supabase React Auth UI login screen for authentication.
-- Directs authenticated users to the Gantt chart component. We'll configure this component in the next section.
+
+- Directs authenticated users to the Gantt chart component. You'll configure this component in the next section.
 - Displays a button to sign out the current user.
 
-Still in the `src` directory, add a `ganttChart.js` file containing the following code:
+Still in the `src` directory, add a `GanttConfig.js` file containing the following code:
 
 ```js
 import { supabase } from './utils/supabaseClient'  
@@ -470,28 +471,22 @@ const gantt = {
 export { gantt};
 ```
 
-Here we invoke the edge function we previously created using the Supabase Client, unpack the response into the Gantt components' properties, and return these properties to the calling component to be used to display the Gantt chart.
+Here you invoke the edge function you previously created using the Supabase Client, unpack the response into the Gantt components' properties, and return these properties to the calling component to be used to display the Gantt chart. #NOTE: this sentence is a bit wak
 
 Now you can run the application with:
 
 ```shell
-npm start
+npm run dev
 ```
 
 You should receive a response similar to the following:
 
 ```shell
-Compiled successfully!
+VITE v5.4.2  ready in 215 ms
 
-You can now view bryntum-gantt-react-supabase-starter in the browser.
-
-  Local:            http://localhost:3000
-  On Your Network:  http://192.168.1.131:3000
-
-Note that the development build is not optimized.
-To create a production build, use npm run build.
-
-webpack compiled successfully
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
 ```
 
 Visit the URL of the application in your browser, and you should see the login screen you created using the Supabase React Auth UI:
