@@ -22,13 +22,13 @@ Give your project a name, set a password for the database, select a region, and 
 
 ![Create project form](img/supabase_create_project_form.png)
 
-We'll need a reference ID and API key for the new project.
+You'll need the reference ID and API key for your new project.
 
 Find the reference ID in the project settings under **General**.
 
 ![Create project ref](img/supabase_ref_id.png)
 
-To find the API key, select **API** from the sidebar. We need the `anon` `public` project API key.
+To find the API key, select **API** from the sidebar. You will see the `anon` `public` project API key.
 
 ![Create project anon key](img/supabase_anon.png)
 
@@ -139,7 +139,7 @@ interface Task {
 }
 ```
 
-You configured CORS headers to allow cross-site traffic, authorization headers, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods. This allows us to use this Edge Function as a RESTful API that can be called using the URL. You will see this once you have deployed the function to your Supabase project.
+You configured CORS headers to allow cross-site traffic, authorization headers, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods. This allows you to use this Edge Function as a RESTful API that can be called using appropriate URL pattern. You will see this once you have deployed the function to your Supabase project.
 
 Now add the following code:
 
@@ -206,46 +206,130 @@ async function createTask(supabaseClient: SupabaseClient, task: Task) {
 }
 ```
 
-Next, add the code to start the [Deno](https://supabase.com/blog/edge-runtime-self-hosted-deno-functions) runtime and set up the Supabase client using the current user authorization headers:
+Next, add the code to start the [Deno](https://supabase.com/blog/edge-runtime-self-hosted-deno-functions) runtime:
 
 ```ts
 Deno.serve(async (req) => {
+  // Server logic here...
+})
+```
+The rest of this code needs to be placed within the curly braces of the Deno function above.
+
+Extract the URL and method from the recieved request:
+```ts
+const { url, method } = req
+```
+And set up the response for an `OPTIONS` request:
+```ts
+if (method === 'OPTIONS') {
+  return new Response('ok', { headers: corsHeaders })
+}
+```
+This returns the list of allowed verbs you added earlier that your edge function will accept.
+
+Next, add a try..catch block that will house the rest of our server function:
+```ts
+try {
+    // unsafe code here
+} 
+catch (error) {
+  console.error(error)
+
+  return new Response(JSON.stringify({ error: error.message }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 400,
+  })
+}
+```
+This will catch any errors in the unsafe code, then return a status code and error message.
+
+Inside the braces of your `try{}` block, first create a Supabase client:
+```ts
+const supabaseClient = createClient(
+  // Supabase API URL - env var exported by default.
+  Deno.env.get('SUPABASE_URL') ?? '',
+  // Supabase API ANON KEY - env var exported by default.
+  Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+  // Create client with Auth context of the user that called the function.
+  // This way your row-level-security (RLS) policies are applied.
+  {
+    global: {
+      headers: { Authorization: req.headers.get('Authorization')! },
+    },
+  }
+)
+```
+The Deno runtime has access to the environment variables of your Supabase instance. Using the `SUPABASE_URL` and `SUPABASE_ANON_KEY`, along with authorization headers which were recieved from the request, a Supabase client is created that will be used to interact with your database.
+
+Then add a few constants that you will need:
+```ts
+const { data: { user }, } = await supabaseClient.auth.getUser(token)
+const taskPattern = new URLPattern({ pathname: '/restful-tasks/:id' })
+const matchingPath = taskPattern.exec(url)
+const id = matchingPath ? matchingPath.pathname.groups.id : null
+```
+You first got the current user based on the requests' authorization header. 
+You then set up a URL pattern `/restful-tasks/:id'`.
+Then you matched the URL from the request to the pattern you created and stored the `id` from the query parameter if it has been given, otherwise `null`.
+
+Now to assign the data to a variable when the request is a `POST` or `PUT`:
+```ts
+let task = null
+if (method === 'POST' || method === 'PUT') {
+  const body = await req.json()
+  task = body.task
+}
+```
+
+Finally, lets add a switch case that calls the correct method depending on the request verb or simply the current user as default:
+```ts
+switch (true) {
+  case id && method === 'GET':
+    return getTask(supabaseClient, id as string)
+  case id && method === 'PUT':
+    return updateTask(supabaseClient, id as string, task)
+  case id && method === 'DELETE':
+    return deleteTask(supabaseClient, id as string)
+  case method === 'POST':
+    return createTask(supabaseClient, task)
+  case method === 'GET':
+    return getAllTasks(supabaseClient)
+  default:
+    return new Response(JSON.stringify({ user }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+}
+```
+
+Your entire server function should look something like this:
+```ts
+Deno.serve(async (req) => {
   const { url, method } = req
-  if (req.method === 'OPTIONS') {
+
+  // This is needed if you're planning to invoke your function from a browser.
+  if (method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
-  
+
   try {
     const supabaseClient = createClient(
-      // Supabase API URL - env var exported by default.
       Deno.env.get('SUPABASE_URL') ?? '',
-      // Supabase API ANON KEY - env var exported by default.
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      // Create client with Auth context of the user that called the function.
-      // This way your row-level-security (RLS) policies are applied.
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
         },
       }
     )
-```
 
-Here you use environment variables and the `Authorization` header from the request to get the values to create the context for the client.
-
-Finally, let's add a request handler function: # NOTE: this 'let's' makes me nervous
-
-```ts
     const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-    const taskPattern = new URLPattern({ pathname: '/tasks-rest/:id' })
+    const { data: { user }, } = await supabaseClient.auth.getUser(token)
+    const taskPattern = new URLPattern({ pathname: '/restful-tasks/:id' })
     const matchingPath = taskPattern.exec(url)
     const id = matchingPath ? matchingPath.pathname.groups.id : null
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser(token)
 
     let task = null
-
     if (method === 'POST' || method === 'PUT') {
       const body = await req.json()
       task = body.task
@@ -268,7 +352,10 @@ Finally, let's add a request handler function: # NOTE: this 'let's' makes me ner
           status: 200,
         })
     }
-  } catch (error) {
+  } 
+  catch (error) {
+    console.error(error)
+
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
@@ -277,8 +364,7 @@ Finally, let's add a request handler function: # NOTE: this 'let's' makes me ner
 })
 ```
 
-This function gets the bearer token for authorization, sets up a URL pattern to parse the incoming request, and then uses the Supabase Auth library to authorize the current user based on the bearer token. It then calls the relevant function based on the given verb in a request.
-
+### Deploy Edge Function
 Generate the CLI access token by logging in:
 
 ```sh
@@ -286,7 +372,6 @@ npx supabase login
 ```
 
 Now you can deploy the Edge Function to your Supabase project:
-
 ```sh
 npx supabase functions deploy tasks-rest --project-ref <Project_Ref_Id>
 ```
@@ -297,7 +382,7 @@ Navigate to your Supabase instance and you should see your new Edge Function dep
 
 ![View deployed function](img/supabase_deployed.png)
 
-Here you can see the URL you can use to access your Edge Function. 
+Here you can see the URL you can use to invoke your Edge Function. 
 
 Edge functions run server-side in your Supabase instance and enforce the security policies you stipulate to give you secure, low-latency access to the data stored in your Postgres database. Edge Functions can be configured in various ways and are easily adapted to perform a range of tasks or processes using any table or combination of tables.
 
@@ -355,7 +440,7 @@ export const supabase = createClient(
 )
 ```
 
-Here you configured the client connection to the Supabase project, which will be used for all interactions with the Supabase instance. You'll use this client to call our edge function/s.
+Here you configured the client connection to the Supabase project, which will be used for all interactions with the Supabase instance. You'll use this client to call your edge function/s.
 
 Navigate back to the root of your React project:
 
@@ -387,11 +472,9 @@ root.render(
   </React.StrictMode>
 );
 ```
-
 This code imports the `supabaseClient` you created, adds the Supabase React Auth UI as the user context provider, and launches the app.
 
 Still in your `src` directory, replace everything in the `App.jsx` file with the following:
-
 ```js
 import './App.scss';
 import './index.css'
