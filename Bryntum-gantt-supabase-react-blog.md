@@ -337,65 +337,9 @@ async function getTask(supabaseClient: SupabaseClient, id: string) {
 ```
 Here you defined an async function that accepts an `id` parameter and uses the Supabase client to run the appropriate `select` query which then returns the response, or throws an error.
 
-Add methods for all the verbs in a request:
+Add methods for the rest of the verbs you would like to handle from a request:
 
 ```ts
-async function getAllGanttData(supabaseClient: SupabaseClient) {
-  // Query the tasks table
-  const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*')
-  if (taskError) throw taskError
-
-  // Query the dependencies table
-  const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*')
-  if (dependencyError) throw dependencyError
-
-  // Query the calendars table
-  const { data: calendarData, error: calendarError } = await supabaseClient.from('calendars').select('*')
-  if (calendarError) throw calendarError
-
-  // Query the resources table
-  const { data: resourceData, error: resourceError } = await supabaseClient.from('resources').select('*')
-  if (resourceError) throw resourceError
-
-  // Query the projects table
-  const { data: projectData, error: projectError } = await supabaseClient.from('projects').select('*')
-  if (projectError) throw projectError
-
-  // Query the intervals table
-  const { data: intervalData, error: intervalError } = await supabaseClient.from('intervals').select('*')
-  if (intervalError) throw intervalError
-
-  // Query the baselines table
-  const { data: baselineData, error: baselineError } = await supabaseClient.from('baselines').select('*')
-  if (baselineError) throw baselineError
-
-  // Combine the results
-  const responseData = {
-    tasks: taskData,
-    dependencies: dependencyData,
-    calendars: calendarData,
-    resources: resourceData,
-    projects: projectData,
-    intervals: intervalData,
-    baselines: baselineData,
-  }
-
-  return new Response(JSON.stringify({ responseData }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
-}
-
-async function getTask(supabaseClient: SupabaseClient, id: string) {
-  const { data: task, error } = await supabaseClient.from('tasks').select('*').eq('id', id)
-  if (error) throw error
-
-  return new Response(JSON.stringify({ task }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
-}
-
 async function deleteTask(supabaseClient: SupabaseClient, id: string) {
   const { error } = await supabaseClient.from('tasks').delete().eq('id', id)
   if (error) throw error
