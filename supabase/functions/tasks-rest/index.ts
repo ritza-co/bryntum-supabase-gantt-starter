@@ -1,11 +1,12 @@
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
+
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 }
 
@@ -14,17 +15,7 @@ interface Task {
   status: number
 }
 
-async function getTask(supabaseClient: SupabaseClient, id: string) {
-  const { data: task, error } = await supabaseClient.from('tasks').select('*').eq('id', id)
-  if (error) throw error
-
-  return new Response(JSON.stringify({ task }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    status: 200,
-  })
-}
-
-async function getAllTasks(supabaseClient: SupabaseClient) {
+async function getAllGanttData(supabaseClient: SupabaseClient) {
   // Query the tasks table
   const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*')
   if (taskError) throw taskError
@@ -32,14 +23,49 @@ async function getAllTasks(supabaseClient: SupabaseClient) {
   // Query the dependencies table
   const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*')
   if (dependencyError) throw dependencyError
-  
+
+  // Query the calendars table
+  const { data: calendarData, error: calendarError } = await supabaseClient.from('calendars').select('*')
+  if (calendarError) throw calendarError
+
+  // Query the resources table
+  const { data: resourceData, error: resourceError } = await supabaseClient.from('resources').select('*')
+  if (resourceError) throw resourceError
+
+  // Query the projects table
+  const { data: projectData, error: projectError } = await supabaseClient.from('projects').select('*')
+  if (projectError) throw projectError
+
+  // Query the intervals table
+  const { data: intervalData, error: intervalError } = await supabaseClient.from('intervals').select('*')
+  if (intervalError) throw intervalError
+
+  // Query the baselines table
+  const { data: baselineData, error: baselineError } = await supabaseClient.from('baselines').select('*')
+  if (baselineError) throw baselineError
+
   // Combine the results
   const responseData = {
     tasks: taskData,
     dependencies: dependencyData,
+    calendars: calendarData,
+    resources: resourceData,
+    projects: projectData,
+    intervals: intervalData,
+    baselines: baselineData,
   }
 
-  return new Response(JSON.stringify({ user, responseData }), {
+  return new Response(JSON.stringify({ responseData }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  })
+}
+
+async function getTask(supabaseClient: SupabaseClient, id: string) {
+  const { data: task, error } = await supabaseClient.from('tasks').select('*').eq('id', id)
+  if (error) throw error
+
+  return new Response(JSON.stringify({ task }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     status: 200,
   })
@@ -99,16 +125,8 @@ Deno.serve(async (req) => {
       }
     )
 
-    // First get the token from the Authorization header
-    const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-
-    // Now we can get the session or user object
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser(token)
-
     // For more details on URLPattern, check https://developer.mozilla.org/en-US/docs/Web/API/URL_Pattern_API
-    const taskPattern = new URLPattern({ pathname: '/restful-tasks/:id' })
+    const taskPattern = new URLPattern({ pathname: '/tasks-rest/:id' })
     const matchingPath = taskPattern.exec(url)
     const id = matchingPath ? matchingPath.pathname.groups.id : null
 
@@ -129,12 +147,9 @@ Deno.serve(async (req) => {
       case method === 'POST':
         return createTask(supabaseClient, task)
       case method === 'GET':
-        return getAllTasks(supabaseClient)
+        return getAllGanttData(supabaseClient)
       default:
-        return new Response(JSON.stringify({ user }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        })
+        return getAllGanttData(supabaseClient)
     }
   } 
   catch (error) {
