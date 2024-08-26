@@ -49,44 +49,175 @@ Navigate to the SQL Editor tab.
 Click **+ New query** from the sidebar and paste the following SQL commands into the editor:
 
 ```sql
+CREATE TABLE projects (
+    id SERIAL PRIMARY KEY,
+    calendar VARCHAR(50),
+    start_date DATE,
+    hours_per_day INT,
+    days_per_week INT,
+    days_per_month INT
+);
+
+CREATE TABLE calendars (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(50),
+    expanded BOOLEAN
+);
+
+CREATE TABLE intervals (
+    id SERIAL PRIMARY KEY,
+    calendar_id VARCHAR(50) REFERENCES calendars(id),
+    recurrent_start_date VARCHAR(50),
+    recurrent_end_date VARCHAR(50),
+    is_working BOOLEAN
+);
+
 CREATE TABLE tasks (
     id INT PRIMARY KEY,
     name VARCHAR(255),
-    percentDone INT,
-    startDate DATE,
-    endDate DATE,
+    percent_done INT,
+    start_date DATE,
+    end_date DATE,
     duration INT,
-    cost DECIMAL(10, 2),
     rollup BOOLEAN,
-    expanded BOOLEAN,
-    showInTimeline BOOLEAN,
-    parentId INT,
-    FOREIGN KEY (parentId) REFERENCES tasks(id)
+    show_in_timeline BOOLEAN,
+    cost INT,
+    parent_id INT REFERENCES tasks(id),
+    project_id INT REFERENCES projects(id)
+);
+
+CREATE TABLE baselines (
+    id SERIAL PRIMARY KEY,
+    task_id INT REFERENCES tasks(id),
+    start_date TIMESTAMP,
+    end_date TIMESTAMP
+);
+
+CREATE TABLE resources (
+    id INT PRIMARY KEY,
+    event INT,
+    resource INT
+);
+
+CREATE TABLE dependencies (
+    id SERIAL PRIMARY KEY,
+    from_task INT REFERENCES tasks(id),
+    to_task INT REFERENCES tasks(id),
+    type VARCHAR(50)
 );
 
 -- Insert data into the tasks table
-INSERT INTO tasks (id, name, percentDone, startDate, endDate, duration, cost, rollup, expanded, showInTimeline, parentId) VALUES
-(1000, 'Launch SaaS Product', 50, '2022-03-14', NULL, NULL, NULL, NULL, TRUE, NULL, NULL),
-(1, 'Setup web server', 50, '2022-03-14', '2022-03-23', 10, NULL, TRUE, TRUE, NULL, 1000),
-(11, 'Install Apache', 50, '2022-03-14', '2022-03-17', 3, 200, TRUE, NULL, NULL, 1),
-(12, 'Propsure firewall', 50, '2022-03-14', '2022-03-17', 3, 1000, TRUE, NULL, TRUE, 1),
-(13, 'Setup load balancer', 50, '2022-03-14', '2022-03-17', 3, 1200, TRUE, NULL, NULL, 1),
-(14, 'Propsure ports', 50, '2022-03-14', '2022-03-16', 2, 750, TRUE, NULL, NULL, 1),
-(15, 'Run tests', 0, '2022-03-21', '2022-03-23', 2, 5000, TRUE, NULL, NULL, 1),
-(2, 'Website Design', 60, '2022-03-23', '2022-04-13', NULL, NULL, TRUE, TRUE, NULL, 1000),
-(21, 'Contact designers', 70, '2022-03-23', '2022-03-30', 5, 500, TRUE, NULL, NULL, 2),
-(22, 'Create shortlist of three designers', 60, '2022-03-30', '2022-03-31', 1, 1000, TRUE, NULL, NULL, 2),
-(23, 'Select & review final design', 50, '2022-03-31', '2022-04-02', 2, 1000, TRUE, NULL, TRUE, 2),
-(24, 'Inform management about decision', 100, '2022-04-04', '2022-04-04', 0, 500, TRUE, NULL, NULL, 2),
-(25, 'Apply design to web site', 0, '2022-04-04', '2022-04-13', 7, 11000, TRUE, NULL, NULL, 2),
-(3, 'Setup Test Strategy', 20, '2022-03-14', NULL, NULL, NULL, NULL, TRUE, NULL, 1000),
-(31, 'Hire QA staff', 40, '2022-03-14', '2022-03-19', 5, 6000, NULL, NULL, NULL, 3),
-(33, 'Write test specs', 9, '2022-03-21', NULL, 5, NULL, NULL, TRUE, NULL, 3),
-(331, 'Unit tests', 20, '2022-03-21', '2022-04-02', 10, 7000, NULL, NULL, TRUE, 33),
-(332, 'UI unit tests / individual screens', 10, '2022-03-21', '2022-03-26', 5, 5000, NULL, NULL, TRUE, 33);
+-- Insert project data
+INSERT INTO projects (calendar, start_date, hours_per_day, days_per_week, days_per_month)
+VALUES ('general', '2022-03-14', 24, 5, 20);
+
+-- Insert calendar data
+INSERT INTO calendars (id, name, expanded)
+VALUES ('general', 'General', TRUE),
+       ('business', 'Business', NULL),
+       ('night', 'Night shift', NULL);
+
+-- Insert intervals data
+INSERT INTO intervals (calendar_id, recurrent_start_date, recurrent_end_date, is_working)
+VALUES ('general', 'on Sat at 0:00', 'on Mon at 0:00', FALSE),
+       ('business', 'every weekday at 12:00', 'every weekday at 13:00', FALSE),
+       ('business', 'every weekday at 17:00', 'every weekday at 08:00', FALSE),
+       ('night', 'every weekday at 6:00', 'every weekday at 22:00', FALSE);
+
+-- Insert tasks data
+INSERT INTO tasks (id, name, percent_done, start_date, end_date, duration, rollup, show_in_timeline, cost, parent_id, project_id)
+VALUES (1000, 'Launch SaaS Product', 50, '2022-03-14', NULL, NULL, NULL, NULL, NULL, NULL, 1),
+       (1, 'Setup web server', 50, '2022-03-14', '2022-03-23', 10, TRUE, NULL, NULL, 1000, 1),
+       (11, 'Install Apache', 50, '2022-03-14', '2022-03-17', 3, TRUE, NULL, 200, 1, 1),
+       (12, 'Propsure firewall', 50, '2022-03-14', '2022-03-17', 3, TRUE, TRUE, 1000, 1, 1),
+       (13, 'Setup load balancer', 50, '2022-03-14', '2022-03-17', 3, TRUE, NULL, 1200, 1, 1),
+       (14, 'Propsure ports', 50, '2022-03-14', '2022-03-16', 2, TRUE, NULL, 750, 1, 1),
+       (15, 'Run tests', 0, '2022-03-21', '2022-03-23', 2, TRUE, NULL, 5000, 1, 1),
+       (2, 'Website Design', 60, '2022-03-23', '2022-04-13', NULL, TRUE, NULL, NULL, 1000, 1),
+       (21, 'Contact designers', 70, '2022-03-23', '2022-03-30', 5, TRUE, NULL, 500, 2, 1),
+       (22, 'Create shortlist of three designers', 60, '2022-03-30', '2022-03-31', 1, TRUE, NULL, 1000, 2, 1),
+       (23, 'Select & review final design', 50, '2022-03-31', '2022-04-02', 2, TRUE, TRUE, 1000, 2, 1),
+       (24, 'Inform management about decision', 100, '2022-04-04', '2022-04-04', 0, TRUE, NULL, 500, 2, 1),
+       (25, 'Apply design to web site', 0, '2022-04-04', '2022-04-13', 7, TRUE, NULL, 11000, 2, 1),
+       (3, 'Setup Test Strategy', 20, '2022-03-14', NULL, NULL, TRUE, NULL, NULL, 1000, 1),
+       (31, 'Hire QA staff', 40, '2022-03-14', '2022-03-19', 5, NULL, NULL, 6000, 3, 1),
+       (33, 'Write test specs', 9, '2022-03-21', NULL, 5, NULL, NULL, NULL, 3, 1),
+       (331, 'Unit tests', 20, '2022-03-21', '2022-04-02', 10, NULL, TRUE, 7000, 33, 1),
+       (332, 'UI unit tests / individual screens', 10, '2022-03-21', '2022-03-26', 5, NULL, TRUE, 5000, 33, 1);
+
+-- Insert baselines data
+INSERT INTO baselines (task_id, start_date, end_date)
+VALUES (11, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
+       (11, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
+       (11, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
+       (12, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
+       (12, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
+       (12, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
+       (13, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
+       (13, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
+       (13, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
+       (14, '2022-03-13T23:00:00', '2022-03-15T23:00:00'),
+       (14, '2022-03-13T23:00:00', '2022-03-15T23:00:00'),
+       (14, '2022-03-13T23:00:00', '2022-03-15T23:00:00'),
+       (15, '2022-03-20T23:00:00', '2022-03-22T23:00:00'),
+       (15, '2022-03-20T23:00:00', '2022-03-22T23:00:00'),
+       (15, '2022-03-20T23:00:00', '2022-03-22T23:00:00'),
+       (21, '2022-03-22T23:00:00', '2022-03-25T23:00:00'),
+       (21, '2022-03-22T23:00:00', '2022-03-28T23:00:00'),
+       (21, '2022-03-22T23:00:00', '2022-03-29T23:00:00'),
+       (22, '2022-03-27T23:00:00', '2022-03-28T23:00:00'),
+       (22, '2022-03-28T23:00:00', '2022-03-29T23:00:00'),
+       (22, '2022-03-29T23:00:00', '2022-03-30T23:00:00'),
+       (23, '2022-03-28T23:00:00', '2022-03-30T23:00:00'),
+       (23, '2022-03-29T23:00:00', '2022-03-31T23:00:00'),
+       (23, '2022-03-30T23:00:00', '2022-04-01T23:00:00'),
+       (24, '2022-03-30T23:00:00', '2022-03-30T23:00:00'),
+       (24, '2022-03-31T23:00:00', '2022-03-31T23:00:00'),
+       (24, '2022-04-01T23:00:00', '2022-04-01T23:00:00'),
+       (25, '2022-03-30T23:00:00', '2022-04-08T23:00:00'),
+       (25, '2022-03-31T23:00:00', '2022-04-11T23:00:00'),
+       (25, '2022-04-03T23:00:00', '2022-04-12T23:00:00'),
+       (31, '2022-03-13T23:00:00', '2022-03-18T23:00:00'),
+       (31, '2022-03-13T23:00:00', '2022-03-18T23:00:00'),
+       (31, '2022-03-13T23:00:00', '2022-03-18T23:00:00'),
+       (331, '2022-03-20T23:00:00', '2022-04-01T23:00:00'),
+       (331, '2022-03-20T23:00:00', '2022-04-01T23:00:00'),
+       (331, '2022-03-20T23:00:00', '2022-04-01T23:00:00'),
+       (332, '2022-03-20T23:00:00', '2022-03-26T23:00:00'),
+       (332, '2022-03-20T23:00:00', '2022-03-26T23:00:00'),
+       (332, '2022-03-20T23:00:00', '2022-03-26T23:00:00');
+
+-- Insert resources data
+INSERT INTO resources (id, event, resource)
+VALUES (3, 12, 9),
+       (4, 13, 2),
+       (5, 13, 3),
+       (6, 13, 6),
+       (7, 13, 7),
+       (8, 13, 8),
+       (9, 21, 5),
+       (10, 21, 9),
+       (11, 22, 8),
+       (12, 25, NULL);
+
+INSERT INTO dependencies (from_task, to_task, type)
+VALUES (1, 11, 'FinishToStart'),
+       (1, 12, 'FinishToStart'),
+       (1, 13, 'FinishToStart'),
+       (1, 14, 'FinishToStart'),
+       (1, 15, 'FinishToStart'),
+       (2, 21, 'FinishToStart'),
+       (2, 22, 'FinishToStart'),
+       (2, 23, 'FinishToStart'),
+       (2, 24, 'FinishToStart'),
+       (2, 25, 'FinishToStart'),
+       (3, 31, 'FinishToStart'),
+       (3, 33, 'FinishToStart'),
+       (33, 331, 'FinishToStart'),
+       (33, 332, 'FinishToStart');
 ```
 
-Click **Run** to run the queries, and a `tasks` table will be created and populated with some data.
+Click **Run** to run the queries, and a series of tables will be created and populated with data.
 
 ## Enable RLS on the new table
 
@@ -129,7 +260,7 @@ import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 }
 
@@ -139,34 +270,127 @@ interface Task {
 }
 ```
 
-You configured CORS headers to allow cross-site traffic, authorization headers, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods. This allows you to use this Edge Function as a RESTful API that can be called using appropriate URL pattern. You will see this once you have deployed the function to your Supabase project.
+You configured CORS headers to allow cross-site traffic, authorization headers, api key, content type, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods. This allows you to use this Edge Function as a RESTful API that can be called using the appropriate URL of your edge function along with the appropriate pattern. You will see this once you have deployed the function to your Supabase project.
 
 Now add the following code:
 
 ```ts
+async function getAllGanttData(supabaseClient: SupabaseClient) {
+  // Query the tasks table
+  const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*')
+  if (taskError) throw taskError
+
+  // Query the dependencies table
+  const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*')
+  if (dependencyError) throw dependencyError
+
+  // Query the calendars table
+  const { data: calendarData, error: calendarError } = await supabaseClient.from('calendars').select('*')
+  if (calendarError) throw calendarError
+
+  // Query the resources table
+  const { data: resourceData, error: resourceError } = await supabaseClient.from('resources').select('*')
+  if (resourceError) throw resourceError
+
+  // Query the projects table
+  const { data: projectData, error: projectError } = await supabaseClient.from('projects').select('*')
+  if (projectError) throw projectError
+
+  // Query the intervals table
+  const { data: intervalData, error: intervalError } = await supabaseClient.from('intervals').select('*')
+  if (intervalError) throw intervalError
+
+  // Query the baselines table
+  const { data: baselineData, error: baselineError } = await supabaseClient.from('baselines').select('*')
+  if (baselineError) throw baselineError
+
+  // Combine the results
+  const responseData = {
+    tasks: taskData,
+    dependencies: dependencyData,
+    calendars: calendarData,
+    resources: resourceData,
+    projects: projectData,
+    intervals: intervalData,
+    baselines: baselineData,
+  }
+
+  return new Response(JSON.stringify({ responseData }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  })
+}
+```
+This function you created is called when you make a `GET` request with no query parameters defined. It will query the tables we created, combine the results and return them.
+
+You can define a function that will accept an `id` argument with:
+```ts
 async function getTask(supabaseClient: SupabaseClient, id: string) {
   const { data: task, error } = await supabaseClient.from('tasks').select('*').eq('id', id)
-  if (error) throw error 
-  
+  if (error) throw error
+
   return new Response(JSON.stringify({ task }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     status: 200,
   })
 }
 ```
-
-Here you defined an async function that accepts an `id` parameter and uses the Supabase client to run the appropriate `select` query and returns the response or throws an error.
+Here you defined an async function that accepts an `id` parameter and uses the Supabase client to run the appropriate `select` query which then returns the response, or throws an error.
 
 Add methods for all the verbs in a request:
 
 ```ts
-async function getAllTasks(supabaseClient: SupabaseClient) {
+async function getAllGanttData(supabaseClient: SupabaseClient) {
   // Query the tasks table
-  const { data: tasks, error: taskError } = await supabaseClient.from('tasks').select('*')
-
+  const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*')
   if (taskError) throw taskError
 
-  return new Response(JSON.stringify({ tasks }), {
+  // Query the dependencies table
+  const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*')
+  if (dependencyError) throw dependencyError
+
+  // Query the calendars table
+  const { data: calendarData, error: calendarError } = await supabaseClient.from('calendars').select('*')
+  if (calendarError) throw calendarError
+
+  // Query the resources table
+  const { data: resourceData, error: resourceError } = await supabaseClient.from('resources').select('*')
+  if (resourceError) throw resourceError
+
+  // Query the projects table
+  const { data: projectData, error: projectError } = await supabaseClient.from('projects').select('*')
+  if (projectError) throw projectError
+
+  // Query the intervals table
+  const { data: intervalData, error: intervalError } = await supabaseClient.from('intervals').select('*')
+  if (intervalError) throw intervalError
+
+  // Query the baselines table
+  const { data: baselineData, error: baselineError } = await supabaseClient.from('baselines').select('*')
+  if (baselineError) throw baselineError
+
+  // Combine the results
+  const responseData = {
+    tasks: taskData,
+    dependencies: dependencyData,
+    calendars: calendarData,
+    resources: resourceData,
+    projects: projectData,
+    intervals: intervalData,
+    baselines: baselineData,
+  }
+
+  return new Response(JSON.stringify({ responseData }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  })
+}
+
+async function getTask(supabaseClient: SupabaseClient, id: string) {
+  const { data: task, error } = await supabaseClient.from('tasks').select('*').eq('id', id)
+  if (error) throw error
+
+  return new Response(JSON.stringify({ task }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     status: 200,
   })
@@ -174,7 +398,6 @@ async function getAllTasks(supabaseClient: SupabaseClient) {
 
 async function deleteTask(supabaseClient: SupabaseClient, id: string) {
   const { error } = await supabaseClient.from('tasks').delete().eq('id', id)
-  
   if (error) throw error
 
   return new Response(JSON.stringify({}), {
@@ -185,7 +408,6 @@ async function deleteTask(supabaseClient: SupabaseClient, id: string) {
 
 async function updateTask(supabaseClient: SupabaseClient, id: string, task: Task) {
   const { error } = await supabaseClient.from('tasks').update(task).eq('id', id)
-
   if (error) throw error
 
   return new Response(JSON.stringify({ task }), {
@@ -196,7 +418,6 @@ async function updateTask(supabaseClient: SupabaseClient, id: string, task: Task
 
 async function createTask(supabaseClient: SupabaseClient, task: Task) {
   const { error } = await supabaseClient.from('tasks').insert(task)
-
   if (error) throw error
 
   return new Response(JSON.stringify({ task }), {
@@ -263,13 +484,12 @@ The Deno runtime has access to the environment variables of your Supabase instan
 
 Then add a few constants that you will need:
 ```ts
-const { data: { user }, } = await supabaseClient.auth.getUser(token)
-const taskPattern = new URLPattern({ pathname: '/restful-tasks/:id' })
+const taskPattern = new URLPattern({ pathname: '/tasks-rest/:id' })
 const matchingPath = taskPattern.exec(url)
 const id = matchingPath ? matchingPath.pathname.groups.id : null
 ```
 You first got the current user based on the requests' authorization header. 
-You then set up a URL pattern `/restful-tasks/:id'`.
+You then set up a URL pattern `/tasks-rest/:id`.
 Then you matched the URL from the request to the pattern you created and stored the `id` from the query parameter if it has been given, otherwise `null`.
 
 Now to assign the data to a variable when the request is a `POST` or `PUT`:
@@ -281,7 +501,7 @@ if (method === 'POST' || method === 'PUT') {
 }
 ```
 
-Finally, lets add a switch case that calls the correct method depending on the request verb or simply the current user as default:
+Finally, lets add a switch case that calls the correct method depending on the request verb or simply all data required for the Gantt chart:
 ```ts
 switch (true) {
   case id && method === 'GET':
@@ -293,12 +513,9 @@ switch (true) {
   case method === 'POST':
     return createTask(supabaseClient, task)
   case method === 'GET':
-    return getAllTasks(supabaseClient)
+    return getAllGanttData(supabaseClient)
   default:
-    return new Response(JSON.stringify({ user }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
+    return getAllGanttData(supabaseClient)
 }
 ```
 
@@ -313,9 +530,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Create a Supabase client with the Auth context of the logged in user.
     const supabaseClient = createClient(
+      // Supabase API URL - env var exported by default.
       Deno.env.get('SUPABASE_URL') ?? '',
+      // Supabase API ANON KEY - env var exported by default.
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      // Create client with Auth context of the user that called the function.
+      // This way your row-level-security (RLS) policies are applied.
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
@@ -323,9 +545,8 @@ Deno.serve(async (req) => {
       }
     )
 
-    const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-    const { data: { user }, } = await supabaseClient.auth.getUser(token)
-    const taskPattern = new URLPattern({ pathname: '/restful-tasks/:id' })
+    // For more details on URLPattern, check https://developer.mozilla.org/en-US/docs/Web/API/URL_Pattern_API
+    const taskPattern = new URLPattern({ pathname: '/tasks-rest/:id' })
     const matchingPath = taskPattern.exec(url)
     const id = matchingPath ? matchingPath.pathname.groups.id : null
 
@@ -335,6 +556,7 @@ Deno.serve(async (req) => {
       task = body.task
     }
 
+    // call relevant method based on method and id
     switch (true) {
       case id && method === 'GET':
         return getTask(supabaseClient, id as string)
@@ -345,12 +567,9 @@ Deno.serve(async (req) => {
       case method === 'POST':
         return createTask(supabaseClient, task)
       case method === 'GET':
-        return getAllTasks(supabaseClient)
+        return getAllGanttData(supabaseClient)
       default:
-        return new Response(JSON.stringify({ user }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        })
+        return getAllGanttData(supabaseClient)
     }
   } 
   catch (error) {
@@ -531,29 +750,54 @@ Here's what this code does:
 Still in the `src` directory, add a `GanttConfig.js` file containing the following code:
 
 ```js
-import { supabase } from './utils/supabaseClient'  
+import { supabase } from './utils/supabaseClient'
 
-// Call our edge function
-const { data, error } = await supabase.functions.invoke("task-rest", {"name":"Functions"})
-if (error) alert(error)
-  console.log(data.responseData)
+// Get the JWT token
+const token = await supabase.auth.getSession().then(({ data }) => data.session.access_token);
 
+// Call the REST API with auth headers
+const response = await fetch('https://<Project_Ref_Id>.supabase.co/functions/v1/tasks-rest', {
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+if (!response.ok) {
+  throw new Error(`HTTP error! status: ${response.status}`);
+}
+
+const data = await response.json();
+
+// Extract the tasks and dependencies from the response
 const tasks = data.responseData.tasks;
+const dependencies = data.responseData.dependencies;
+const calendars = data.responseData.calendars;
+const resources = data.responseData.resources;
+const projects = data.responseData.projects;
+const intervals = data.responseData.intervals;
+const baselines = data.responseData.baselines;
 
-const gantt = {
+const ganttProps = {
   viewPreset : 'weekAndDayLetter',
   barMargin  : 10,
   project : {
       tasks: tasks,
+      dependencies: dependencies,
+      calendars: calendars,
+      resources: resources,
+      projects: projects,
+      intervals: intervals,
+      baselines: baselines,
       autoLoad: true,
       autoSetConstraints : true
   }
 };
 
-export { gantt};
+export { ganttProps };
 ```
 
-Here you invoke the edge function you previously created using the Supabase Client, unpack the response into the Gantt components' properties, and return these properties to the calling component to be used to display the Gantt chart. #NOTE: this sentence is a bit wak
+Here you invoke the edge function you previously created by sending a `GET` request to your edge functions' URL `https://<Project_Ref_Id>.supabase.co/functions/v1/tasks-rest`. You then unpack the response into the Gantt components' properties, and return these properties to the parent component which uses these properties to display the Gantt chart.
 
 Now you can run the application with:
 
