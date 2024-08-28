@@ -596,10 +596,8 @@ Add a new JavaScript file named `supabaseClient.js` inside the directory and pas
 ```js
 import { createClient } from '@supabase/supabase-js'
 
-export const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL ?? 'https://<Project_Ref_Id>.supabase.co',
-  process.env.REACT_APP_SUPABASE_ANON_KEY ??
-    '<Supabase_Anonymous_Key>'
+export const supabase = createClient('https://<Project_Ref_Id>.supabase.co', 
+  '<Supabase_Anonymous_Key>'
 )
 ```
 
@@ -640,13 +638,12 @@ This code imports the `supabaseClient` you created, adds the Supabase React Auth
 Still in your `src` directory, replace everything in the `App.jsx` file with the following:
 ```js
 import './App.scss';
-import './index.css'
 import { useState, useEffect } from 'react'
 import { supabase } from './utils/supabaseClient'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { BryntumGantt } from '@bryntum/gantt-react';
-import { gantt } from './ganttChart';
+import { ganttProps } from './GanttConfig';
 
 function App() {
   const [session, setSession] = useState(null)
@@ -655,15 +652,16 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
     })
-  
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
+
     return () => subscription.unsubscribe()
   }, [])
-
+  
   if (!session) {
     return (<div style={{display: 'flex',  justifyContent:'center', alignItems:'center', height: '100vh'}}>
             <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />
@@ -672,7 +670,7 @@ function App() {
   else {
     return (
     <div style={{ height: '100%', justifyContent: 'space-around', alignContent: 'center'}}>
-      <BryntumGantt {...gantt} />
+      <BryntumGantt {...ganttProps} />
       <button
         onClick={() => supabase.auth.signOut()}
       >
@@ -680,6 +678,7 @@ function App() {
       </button>
     </div>)
   }
+  
 }
 
 export default App;
