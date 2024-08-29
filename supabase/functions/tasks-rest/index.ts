@@ -24,35 +24,11 @@ async function getAllGanttData(supabaseClient: SupabaseClient) {
   const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*')
   if (dependencyError) throw dependencyError
 
-  // Query the calendars table
-  const { data: calendarData, error: calendarError } = await supabaseClient.from('calendars').select('*')
-  if (calendarError) throw calendarError
-
-  // Query the resources table
-  const { data: resourceData, error: resourceError } = await supabaseClient.from('resources').select('*')
-  if (resourceError) throw resourceError
-
-  // Query the projects table
-  const { data: projectData, error: projectError } = await supabaseClient.from('projects').select('*')
-  if (projectError) throw projectError
-
-  // Query the intervals table
-  const { data: intervalData, error: intervalError } = await supabaseClient.from('intervals').select('*')
-  if (intervalError) throw intervalError
-
-  // Query the baselines table
-  const { data: baselineData, error: baselineError } = await supabaseClient.from('baselines').select('*')
-  if (baselineError) throw baselineError
 
   // Combine the results
   const responseData = {
     tasks: taskData,
     dependencies: dependencyData,
-    calendars: calendarData,
-    resources: resourceData,
-    projects: projectData,
-    intervals: intervalData,
-    baselines: baselineData,
   }
 
   return new Response(JSON.stringify({ responseData }), {
