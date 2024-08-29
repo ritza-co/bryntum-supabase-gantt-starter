@@ -1,6 +1,6 @@
 # How to use Supabase Edge Functions to build a Bryntum Gantt chart in React
 
-The [Bryntum Gantt](https://bryntum.com/products/gantt/) is a feature-rich and performant component for creating interactive Gantt charts in web applications. 
+The [Bryntum Gantt](https://bryntum.com/products/gantt/) is a feature-rich and performant component for creating interactive Gantt charts in web applications.
 
 In this post, we'll show you how to integrate Bryntum Gantt with a Supabase Postgres database. We'll use Supabase Edge Functions to interact with the database and Supabase Auth with row-level security (RLS) enabled for authorization.
 
@@ -40,11 +40,9 @@ Navigate to the **Authentication** tab and click **Add user** to create a new us
 
 Take note of the new user's email and password to use later.
 
-## Create a new database table
+## Create new database tables
 
 Navigate to the SQL Editor tab.
-
-![Create query](img/supabase_sql_editor.png)
 
 Click **+ New query** from the sidebar and paste the following SQL commands into the editor:
 
@@ -99,13 +97,13 @@ INSERT INTO dependencies (id, "fromEvent", "toEvent") VALUES
 
 Click **Run** to run the queries, two tables will be created and populated with data.
 
-## Enable RLS on the new table
+## Enable RLS on the new tables
 
 Let's enable RLS on the new tables. In the **Authentication** tab, select **Policies** from the sidebar. Click **Enable RLS** for the new tables.
 
 ![Create table policy](img/supabase_enable_policy.png)
 
-Now click **Create policy**. In the dialog that opens, give the new policy a name and click **Save policy**
+Now click **Create policy**. In the dialog that opens, give the new policy a name and select authenticated on target roles. Click **Save policy** to save the policy for each table.
 
 ![Create table policy form](img/supabase_create_policy.png)
 
@@ -115,7 +113,7 @@ You'll need to follow the same process for every table you add that you would li
 
 ## Use Supabase CLI to develop an Edge Function
 
-You can use the Supabase CLI to manage instances, develop and deploy projects, handle migrations, and generate native data types. 
+You can use the Supabase CLI to manage instances, develop and deploy projects, handle migrations, and generate native data types.
 
 Access the Supabase CLI in your shell environment using package managers for macOS, Windows, Linux, and npm or Bun. This guide assumes you're using npm as your package manager. For other package managers, consult the [Supabase CLI documentation](https://supabase.com/docs/guides/cli/getting-started?queryGroups=platform&platform=macos#installing-the-supabase-cli), but the basics will remain the same.
 
@@ -176,9 +174,11 @@ async function getAllGanttData(supabaseClient: SupabaseClient) {
   })
 }
 ```
+
 This function you created is called when you make a `GET` request with no query parameters defined. It will query the tables we created, combine the results and return them.
 
 You can define a function that will accept an `id` argument with:
+
 ```ts
 async function getTask(supabaseClient: SupabaseClient, id: string) {
   const { data: task, error } = await supabaseClient.from('tasks').select('*').eq('id', id)
@@ -190,6 +190,7 @@ async function getTask(supabaseClient: SupabaseClient, id: string) {
   })
 }
 ```
+
 Here you defined an async function that accepts an `id` parameter and uses the Supabase client to run the appropriate `select` query which then returns the response, or throws an error.
 
 Add methods for the rest of the verbs you would like to handle from a request:
@@ -233,21 +234,27 @@ Deno.serve(async (req) => {
   // Server logic here...
 })
 ```
+
 The rest of this code needs to be placed within the curly braces of the Deno function above.
 
 Extract the URL and method from the received request:
+
 ```ts
 const { url, method } = req
 ```
+
 And set up the response for an `OPTIONS` request:
+
 ```ts
 if (method === 'OPTIONS') {
   return new Response('ok', { headers: corsHeaders })
 }
 ```
+
 This returns the list of allowed verbs you added earlier that your edge function will accept.
 
-Next, add a try..catch block that will house the rest of our server function:
+Next, add a `try..catch` block that will house the rest of our server function:
+
 ```ts
 try {
     // unsafe code here
@@ -261,9 +268,11 @@ catch (error) {
   })
 }
 ```
+
 This will catch any errors in the unsafe code, then return a status code and error message.
 
 Inside the braces of your `try{}` block, first create a Supabase client:
+
 ```ts
 const supabaseClient = createClient(
   // Supabase API URL - env var exported by default.
@@ -279,19 +288,23 @@ const supabaseClient = createClient(
   }
 )
 ```
+
 The Deno runtime has access to the environment variables of your Supabase instance. Using the `SUPABASE_URL` and `SUPABASE_ANON_KEY`, along with authorization headers which will be received from the request, a Supabase client is created that will be used to interact with your database.
 
 Then add a few constants that you will need:
+
 ```ts
 const taskPattern = new URLPattern({ pathname: '/tasks-rest/:id' })
 const matchingPath = taskPattern.exec(url)
 const id = matchingPath ? matchingPath.pathname.groups.id : null
 ```
-You first got the current user based on the requests' authorization header. 
+
+You first got the current user based on the requests' authorization header.
 You then set up a URL pattern `/tasks-rest/:id`.
 Then you matched the URL from the request to the pattern you created and stored the `id` from the query parameter if it has been given, otherwise `null`.
 
 Now to assign the data to a variable when the request is a `POST` or `PUT`:
+
 ```ts
 let task = null
 if (method === 'POST' || method === 'PUT') {
@@ -300,7 +313,8 @@ if (method === 'POST' || method === 'PUT') {
 }
 ```
 
-Finally, lets add a switch case that calls the correct method depending on the request verb, or simply all data required for the Gantt chart:
+Finally, lets add a switch case that calls the correct method depending on the request verb, or simply return all data required for the Gantt chart:
+
 ```ts
 switch (true) {
   case id && method === 'GET':
@@ -319,6 +333,7 @@ switch (true) {
 ```
 
 Your entire server function should look something like this:
+
 ```ts
 Deno.serve(async (req) => {
   const { url, method } = req
@@ -383,6 +398,7 @@ Deno.serve(async (req) => {
 ```
 
 ### Deploy Edge Function
+
 Generate the CLI access token by logging in:
 
 ```sh
@@ -390,6 +406,7 @@ npx supabase login
 ```
 
 Now you can deploy the Edge Function to your Supabase project:
+
 ```sh
 npx supabase functions deploy tasks-rest --project-ref <Project_Ref_Id>
 ```
@@ -400,14 +417,14 @@ Navigate to your Supabase instance and you should see your new Edge Function dep
 
 ![View deployed function](img/supabase_deployed.png)
 
-Here you can see the URL you can use to invoke your Edge Function. 
+Here you can see the URL you can use to invoke your Edge Function.
 
 Edge functions run server-side in your Supabase instance and enforce the security policies you stipulate to give you secure, low-latency access to the data stored in your Postgres database. Edge Functions can be configured in various ways and are easily adapted to perform a range of tasks or processes using any table or combination of tables.
 
 
 ## Add Bryntum Gantt to the React application
 
-Now you can add Bryntum Gantt to your React application. If you don't have an existing React application ready, [these](https://bryntum.com/products/gantt/docs/guide/Gantt/quick-start/react) instructions should get you started quickly. 
+Now you can add Bryntum Gantt to your React application. If you don't have an existing React application ready, [these](https://bryntum.com/products/gantt/docs/guide/Gantt/quick-start/react) instructions should get you started quickly.
 
 First, in your application's directory, configure npm to download the Bryntum packages in the `@brytum` scope from the Bryntum registry by following the instructions in our documentation [here](https://bryntum.com/products/gantt/docs/guide/Gantt/npm-repository).
 
@@ -434,19 +451,13 @@ Your application is now set up to use the Supabase login component and Bryntum G
 
 ## Connect to the Supabase Edge Function
 
-Create a new utilities directory:
+Create a new utilities directory within the `src` directory of your code:
 
 ```sh
 mkdir utils
 ```
 
-Navigate into the new directory:
-
-```sh
-cd utils
-```
-
-Add a new JavaScript file named `supabaseClient.js` inside the directory and paste the following into it, replacing `<Project_Ref_Id>` and `<Supabase_Anonymous_Key>` with your Supabase values:
+In the `utils` directory add a new JavaScript file named `supabaseClient.js` inside the directory and paste the following into it, replacing `<Project_Ref_Id>` and `<Supabase_Anonymous_Key>` with your Supabase values:
 
 ```js
 import { createClient } from '@supabase/supabase-js'
@@ -456,23 +467,12 @@ export const supabase = createClient('https://<Project_Ref_Id>.supabase.co',
 )
 ```
 
-Here you configured the client connection to the Supabase project, which will be used for all interactions with the Supabase instance. You'll use this client to call your edge function/s.
+Here you configured the client connection to the Supabase project, which will be used for all interactions with the Supabase instance. You'll use this client to call your edge function.
 
-Navigate back to the root of your React project:
 
-```shell
-cd ..
-```
+Find your `src/main.jsx` file and replace its contents with the following:
 
-Change to the `src` directory:
-
-```shell
-cd src
-```
-
-Find your `main.jsx` file and replace its contents with the following:
-
-```js
+```jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -488,9 +488,11 @@ root.render(
   </React.StrictMode>
 );
 ```
+
 This code imports the `supabaseClient` you created, adds the Supabase React Auth UI as the user context provider, and launches the app.
 
 Still in your `src` directory, replace everything in the `App.jsx` file with the following:
+
 ```js
 import './App.scss';
 import { useState, useEffect } from 'react';
@@ -581,7 +583,7 @@ async function getGanttProps() {
   const token = session.access_token;
 
   // Call the REST API with auth headers
-  const response = await fetch('https://wnyfjxqbotytkwvcdbce.supabase.co/functions/v1/tasks-rest', {
+  const response = await fetch('https://<Edge_Functuin_Id>.supabase.co/functions/v1/tasks-rest', {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
@@ -618,7 +620,7 @@ async function getGanttProps() {
 export { getGanttProps };
 ```
 
-Here you created a function that gets the user session and invokes the edge function you previously created by sending a `GET` request to your edge functions' URL `https://<Project_Ref_Id>.supabase.co/functions/v1/tasks-rest`. You then unpack the response into the properties of the Gantt component. You then return these properties to the parent component which uses them to display the Gantt chart.
+Here you created a function that gets the user session and invokes the edge function you previously created by sending a `GET` request to your edge functions' URL `https://<Edge_Functuin_Id>.supabase.co/functions/v1/tasks-rest`. You then unpack the response into the properties of the Gantt component. You then return these properties to the parent component which uses them to display the Gantt chart.
 
 Now you can run the application with:
 
@@ -638,10 +640,10 @@ VITE v5.4.2  ready in 215 ms
 
 Visit the URL of the application in your browser, and you should see the login screen you created using the Supabase React Auth UI:
 
-![View login component](https://github.com/user-attachments/assets/b968fb03-7568-4ee0-bc7f-db90b4fc79dc)
+![View login component](img/app_login.png)
 
 Log in to the application with the credentials for the user you created when you set up the Supabase project. You should see the new Bryntum Gantt chart created by querying the data from your edge function:
 
-![View Gantt Chart](https://github.com/user-attachments/assets/b8503aaa-bd51-4faf-9099-c2cc4bfa4553)
+![View Gantt Chart](img/app_gantt_chart.png)
 
 You can sign out of the application by clicking the **Sign Out** button below the chart.
