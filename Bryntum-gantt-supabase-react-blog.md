@@ -606,7 +606,7 @@ Here you configured the client connection to the Supabase project, which will be
 Navigate back to the root of your React project:
 
 ```shell
-cd ../..
+cd ..
 ```
 
 Change to the `src` directory:
@@ -638,47 +638,55 @@ This code imports the `supabaseClient` you created, adds the Supabase React Auth
 Still in your `src` directory, replace everything in the `App.jsx` file with the following:
 ```js
 import './App.scss';
-import { useState, useEffect } from 'react'
-import { supabase } from './utils/supabaseClient'
-import { Auth } from '@supabase/auth-ui-react'
-import { ThemeSupa } from '@supabase/auth-ui-shared'
+import { useState, useEffect } from 'react';
+import { supabase } from './utils/supabaseClient';
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { BryntumGantt } from '@bryntum/gantt-react';
-import { ganttProps } from './GanttConfig';
+import { getGanttProps } from './GanttConfig';
 
 function App() {
-  const [session, setSession] = useState(null)
+  const [session, setSession] = useState(null);
+  const [ganttProps, setGanttProps] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
+      setSession(session);
+    });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
+      setSession(session);
+    });
 
-    return () => subscription.unsubscribe()
-  }, [])
-  
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (session !== null) {
+      getGanttProps().then((props) => {
+        setGanttProps(props);
+      });
+    }
+  }, [session]);
+
   if (!session) {
-    return (<div style={{display: 'flex',  justifyContent:'center', alignItems:'center', height: '100vh'}}>
-            <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />
-          </div>)
-  }
-  else {
     return (
-    <div style={{ height: '100%', justifyContent: 'space-around', alignContent: 'center'}}>
-      <BryntumGantt {...ganttProps} />
-      <button
-        onClick={() => supabase.auth.signOut()}
-      >
-        Sign out
-      </button>
-    </div>)
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />
+      </div>
+    );
+  } else if (!ganttProps) {
+    return <div>Loading...</div>;
+  } else {
+    return (
+      <div style={{ height: '100%', justifyContent: 'space-around', alignContent: 'center' }}>
+        <BryntumGantt {...ganttProps} />
+        <button onClick={() => supabase.auth.signOut()}>Sign out</button>
+      </div>
+    );
   }
-  
 }
 
 export default App;
@@ -693,54 +701,69 @@ Here's what this code does:
 Still in the `src` directory, add a `GanttConfig.js` file containing the following code:
 
 ```js
-import { supabase } from './utils/supabaseClient'
+import { supabase } from './utils/supabaseClient';
 
-// Get the JWT token
-const token = await supabase.auth.getSession().then(({ data }) => data.session.access_token);
+async function getGanttProps() {
+  // Get the JWT token
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
 
-// Call the REST API with auth headers
-const response = await fetch('https://<Project_Ref_Id>.supabase.co/functions/v1/tasks-rest', {
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+  if (!session) {
+    // Return default or empty ganttProps if session is not available
+    return {
+      columns: [{ type: 'name', field: 'name', width: 250 }],
+      viewPreset: 'weekAndDayLetter',
+      barMargin: 10,
+      project: {
+        tasks: [],
+        dependencies: [],
+        autoLoad: true,
+        autoSetConstraints: true,
+      },
+    };
   }
-});
 
-if (!response.ok) {
-  throw new Error(`HTTP error! status: ${response.status}`);
+  const token = session.access_token;
+
+  // Call the REST API with auth headers
+  const response = await fetch('https://wnyfjxqbotytkwvcdbce.supabase.co/functions/v1/tasks-rest', {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const ganttData = await response.json();
+
+  // Extract the tasks and dependencies from the response
+  const tasks = ganttData.responseData.tasks;
+  const dependencies = ganttData.responseData.dependencies;
+
+  return {
+    columns: [{ type: 'name', field: 'name', width: 250 }],
+    viewPreset: 'weekAndDayLetter',
+    barMargin: 10,
+    project: {
+        taskStore: {
+            transformFlatData: true,
+            },
+        tasks: tasks,
+        dependencies: dependencies,
+        autoLoad: true,
+        autoSetConstraints: true,
+        validateResponse: true,
+    },
+  };
 }
 
-const data = await response.json();
-
-// Extract the tasks and dependencies from the response
-const tasks = data.responseData.tasks;
-const dependencies = data.responseData.dependencies;
-const calendars = data.responseData.calendars;
-const resources = data.responseData.resources;
-const projects = data.responseData.projects;
-const intervals = data.responseData.intervals;
-const baselines = data.responseData.baselines;
-
-const ganttProps = {
-  viewPreset : 'weekAndDayLetter',
-  barMargin  : 10,
-  project : {
-      tasks: tasks,
-      dependencies: dependencies,
-      calendars: calendars,
-      resources: resources,
-      projects: projects,
-      intervals: intervals,
-      baselines: baselines,
-      autoLoad: true,
-      autoSetConstraints : true
-  }
-};
-
-export { ganttProps };
+export { getGanttProps };
 ```
 
-Here you invoke the edge function you previously created by sending a `GET` request to your edge functions' URL `https://<Project_Ref_Id>.supabase.co/functions/v1/tasks-rest`. You then unpack the response into the Gantt components' properties, and return these properties to the parent component which uses these properties to display the Gantt chart.
+Here you created a function that gets the user session and invokes the edge function you previously created by sending a `GET` request to your edge functions' URL `https://<Project_Ref_Id>.supabase.co/functions/v1/tasks-rest`. You then unpack the response into the properties of the Gantt component. You then return these properties to the parent component which uses them to display the Gantt chart.
 
 Now you can run the application with:
 
@@ -764,6 +787,6 @@ Visit the URL of the application in your browser, and you should see the login s
 
 Log in to the application with the credentials for the user you created when you set up the Supabase project. You should see the new Bryntum Gantt chart created by querying the data from your edge function:
 
-![View deployed function](https://github.com/user-attachments/assets/b8503aaa-bd51-4faf-9099-c2cc4bfa4553)
+![View Gantt Chart](https://github.com/user-attachments/assets/b8503aaa-bd51-4faf-9099-c2cc4bfa4553)
 
 You can sign out of the application by clicking the **Sign Out** button below the chart.
