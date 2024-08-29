@@ -53,16 +53,16 @@ Click **+ New query** from the sidebar and paste the following SQL commands into
 CREATE TABLE tasks (
     id INT PRIMARY KEY,
     name VARCHAR(255),
-    percentDone INT,
-    startDate DATE,
-    endDate DATE,
+    "percentDone" INT,
+    "startDate" DATE,
+    "endDate" DATE,
     rollup BOOLEAN,
     expanded BOOLEAN,
-    parentId INT
+    "parentId" INT
 );
 
 -- Insert data into the tasks table
-INSERT INTO tasks (id, name, percentDone, startDate, endDate, rollup, expanded, parentId) VALUES
+INSERT INTO tasks (id, name, "percentDone", "startDate", "endDate", rollup, expanded, "parentId") VALUES
 (1, 'Website Design', 30, '2024-05-20', '2024-06-14', TRUE, TRUE, NULL),
 (2, 'Contact designers', 100, '2024-05-24', '2024-05-26', NULL, NULL, 1),
 (3, 'Create shortlist of three designers', 60, '2024-05-27', '2024-05-29', NULL, NULL, 1),
@@ -79,12 +79,12 @@ INSERT INTO tasks (id, name, percentDone, startDate, endDate, rollup, expanded, 
 -- Create the dependencies table
 CREATE TABLE dependencies (
     id INT PRIMARY KEY,
-    fromEvent INT,
-    toEvent INT
+    "fromEvent" INT,
+    "toEvent" INT
 );
 
 -- Insert data into the dependencies table
-INSERT INTO dependencies (id, fromEvent, toEvent) VALUES
+INSERT INTO dependencies (id, "fromEvent", "toEvent") VALUES
 (1, 2, 3),
 (2, 3, 4),
 (3, 4, 5),
@@ -95,6 +95,7 @@ INSERT INTO dependencies (id, fromEvent, toEvent) VALUES
 (8, 10, 11),
 (9, 11, 12);
 ```
+**Note:** the `"` around some column names, Postgres by default names database tables and columns without any capitalization which will cause the Gantt chart to not behave as expected. Wrap all the column names that have capitals with quotes to prevent these issues from occurring.
 
 Click **Run** to run the queries, two tables will be created and populated with data.
 
@@ -110,7 +111,7 @@ Now click **Create policy**. In the dialog that opens, give the new policy a nam
 
 This policy allows only authenticated users to read the data in the table. Users can be assigned policies that dictate their access to specific rows in tables.
 
-You'll need to follow the same process for every table you add that you would like authenticated users to access. Tables with RLS enabled and no policies assigned will not allow any user except the superuser to access the table data.
+You'll need to follow the same process for every table you add that you would like authenticated users to access. Tables with RLS enabled and no policies assigned will not allow any user, except the superuser, to access the table data.
 
 ## Use Supabase CLI to develop an Edge Function
 
@@ -162,7 +163,6 @@ async function getAllGanttData(supabaseClient: SupabaseClient) {
   // Query the dependencies table
   const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*')
   if (dependencyError) throw dependencyError
-
 
   // Combine the results
   const responseData = {
@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
 ```
 The rest of this code needs to be placed within the curly braces of the Deno function above.
 
-Extract the URL and method from the recieved request:
+Extract the URL and method from the received request:
 ```ts
 const { url, method } = req
 ```
@@ -279,7 +279,7 @@ const supabaseClient = createClient(
   }
 )
 ```
-The Deno runtime has access to the environment variables of your Supabase instance. Using the `SUPABASE_URL` and `SUPABASE_ANON_KEY`, along with authorization headers which were recieved from the request, a Supabase client is created that will be used to interact with your database.
+The Deno runtime has access to the environment variables of your Supabase instance. Using the `SUPABASE_URL` and `SUPABASE_ANON_KEY`, along with authorization headers which will be received from the request, a Supabase client is created that will be used to interact with your database.
 
 Then add a few constants that you will need:
 ```ts
@@ -300,7 +300,7 @@ if (method === 'POST' || method === 'PUT') {
 }
 ```
 
-Finally, lets add a switch case that calls the correct method depending on the request verb or simply all data required for the Gantt chart:
+Finally, lets add a switch case that calls the correct method depending on the request verb, or simply all data required for the Gantt chart:
 ```ts
 switch (true) {
   case id && method === 'GET':
