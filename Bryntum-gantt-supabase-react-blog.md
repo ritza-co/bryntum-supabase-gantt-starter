@@ -49,179 +49,58 @@ Navigate to the SQL Editor tab.
 Click **+ New query** from the sidebar and paste the following SQL commands into the editor:
 
 ```sql
-CREATE TABLE projects (
-    id SERIAL PRIMARY KEY,
-    calendar VARCHAR(50),
-    start_date DATE,
-    hours_per_day INT,
-    days_per_week INT,
-    days_per_month INT
-);
-
-CREATE TABLE calendars (
-    id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(50),
-    expanded BOOLEAN
-);
-
-CREATE TABLE intervals (
-    id SERIAL PRIMARY KEY,
-    calendar_id VARCHAR(50) REFERENCES calendars(id),
-    recurrent_start_date VARCHAR(50),
-    recurrent_end_date VARCHAR(50),
-    is_working BOOLEAN
-);
-
+-- Create the tasks table
 CREATE TABLE tasks (
     id INT PRIMARY KEY,
     name VARCHAR(255),
-    percent_done INT,
-    start_date DATE,
-    end_date DATE,
-    duration INT,
+    percentDone INT,
+    startDate DATE,
+    endDate DATE,
     rollup BOOLEAN,
-    show_in_timeline BOOLEAN,
-    cost INT,
-    parent_id INT REFERENCES tasks(id),
-    project_id INT REFERENCES projects(id)
-);
-
-CREATE TABLE baselines (
-    id SERIAL PRIMARY KEY,
-    task_id INT REFERENCES tasks(id),
-    start_date TIMESTAMP,
-    end_date TIMESTAMP
-);
-
-CREATE TABLE resources (
-    id INT PRIMARY KEY,
-    event INT,
-    resource INT
-);
-
-CREATE TABLE dependencies (
-    id SERIAL PRIMARY KEY,
-    from_task INT REFERENCES tasks(id),
-    to_task INT REFERENCES tasks(id),
-    type VARCHAR(50)
+    expanded BOOLEAN,
+    parentId INT
 );
 
 -- Insert data into the tasks table
--- Insert project data
-INSERT INTO projects (calendar, start_date, hours_per_day, days_per_week, days_per_month)
-VALUES ('general', '2022-03-14', 24, 5, 20);
+INSERT INTO tasks (id, name, percentDone, startDate, endDate, rollup, expanded, parentId) VALUES
+(1, 'Website Design', 30, '2024-05-20', '2024-06-14', TRUE, TRUE, NULL),
+(2, 'Contact designers', 100, '2024-05-24', '2024-05-26', NULL, NULL, 1),
+(3, 'Create shortlist of three designers', 60, '2024-05-27', '2024-05-29', NULL, NULL, 1),
+(4, 'Select & review final design', 0, '2024-05-30', '2024-06-03', NULL, NULL, 1),
+(5, 'Apply design to web site', 0, '2024-06-04', '2024-06-07', NULL, NULL, 1),
+(6, 'User feedback assessment', 0, '2024-06-10', '2024-06-14', NULL, NULL, 1),
+(7, 'Setup Test Strategy', 0, '2024-06-17', '2024-06-28', NULL, TRUE, NULL),
+(8, 'Hire QA staff', 0, '2024-06-17', '2024-06-19', NULL, NULL, 7),
+(9, 'Write test specs', 0, '2024-06-19', '2024-06-21', NULL, NULL, 7),
+(10, 'Unit tests', 0, '2024-06-22', '2024-06-24', NULL, NULL, 7),
+(11, 'UI unit tests / individual screens', 0, '2024-06-25', '2024-06-28', NULL, NULL, 7),
+(12, 'Application tests', 0, '2024-05-21', '2024-06-02', NULL, NULL, 7);
 
--- Insert calendar data
-INSERT INTO calendars (id, name, expanded)
-VALUES ('general', 'General', TRUE),
-       ('business', 'Business', NULL),
-       ('night', 'Night shift', NULL);
+-- Create the dependencies table
+CREATE TABLE dependencies (
+    id INT PRIMARY KEY,
+    fromEvent INT,
+    toEvent INT
+);
 
--- Insert intervals data
-INSERT INTO intervals (calendar_id, recurrent_start_date, recurrent_end_date, is_working)
-VALUES ('general', 'on Sat at 0:00', 'on Mon at 0:00', FALSE),
-       ('business', 'every weekday at 12:00', 'every weekday at 13:00', FALSE),
-       ('business', 'every weekday at 17:00', 'every weekday at 08:00', FALSE),
-       ('night', 'every weekday at 6:00', 'every weekday at 22:00', FALSE);
-
--- Insert tasks data
-INSERT INTO tasks (id, name, percent_done, start_date, end_date, duration, rollup, show_in_timeline, cost, parent_id, project_id)
-VALUES (1000, 'Launch SaaS Product', 50, '2022-03-14', NULL, NULL, NULL, NULL, NULL, NULL, 1),
-       (1, 'Setup web server', 50, '2022-03-14', '2022-03-23', 10, TRUE, NULL, NULL, 1000, 1),
-       (11, 'Install Apache', 50, '2022-03-14', '2022-03-17', 3, TRUE, NULL, 200, 1, 1),
-       (12, 'Propsure firewall', 50, '2022-03-14', '2022-03-17', 3, TRUE, TRUE, 1000, 1, 1),
-       (13, 'Setup load balancer', 50, '2022-03-14', '2022-03-17', 3, TRUE, NULL, 1200, 1, 1),
-       (14, 'Propsure ports', 50, '2022-03-14', '2022-03-16', 2, TRUE, NULL, 750, 1, 1),
-       (15, 'Run tests', 0, '2022-03-21', '2022-03-23', 2, TRUE, NULL, 5000, 1, 1),
-       (2, 'Website Design', 60, '2022-03-23', '2022-04-13', NULL, TRUE, NULL, NULL, 1000, 1),
-       (21, 'Contact designers', 70, '2022-03-23', '2022-03-30', 5, TRUE, NULL, 500, 2, 1),
-       (22, 'Create shortlist of three designers', 60, '2022-03-30', '2022-03-31', 1, TRUE, NULL, 1000, 2, 1),
-       (23, 'Select & review final design', 50, '2022-03-31', '2022-04-02', 2, TRUE, TRUE, 1000, 2, 1),
-       (24, 'Inform management about decision', 100, '2022-04-04', '2022-04-04', 0, TRUE, NULL, 500, 2, 1),
-       (25, 'Apply design to web site', 0, '2022-04-04', '2022-04-13', 7, TRUE, NULL, 11000, 2, 1),
-       (3, 'Setup Test Strategy', 20, '2022-03-14', NULL, NULL, TRUE, NULL, NULL, 1000, 1),
-       (31, 'Hire QA staff', 40, '2022-03-14', '2022-03-19', 5, NULL, NULL, 6000, 3, 1),
-       (33, 'Write test specs', 9, '2022-03-21', NULL, 5, NULL, NULL, NULL, 3, 1),
-       (331, 'Unit tests', 20, '2022-03-21', '2022-04-02', 10, NULL, TRUE, 7000, 33, 1),
-       (332, 'UI unit tests / individual screens', 10, '2022-03-21', '2022-03-26', 5, NULL, TRUE, 5000, 33, 1);
-
--- Insert baselines data
-INSERT INTO baselines (task_id, start_date, end_date)
-VALUES (11, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
-       (11, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
-       (11, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
-       (12, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
-       (12, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
-       (12, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
-       (13, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
-       (13, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
-       (13, '2022-03-13T23:00:00', '2022-03-16T23:00:00'),
-       (14, '2022-03-13T23:00:00', '2022-03-15T23:00:00'),
-       (14, '2022-03-13T23:00:00', '2022-03-15T23:00:00'),
-       (14, '2022-03-13T23:00:00', '2022-03-15T23:00:00'),
-       (15, '2022-03-20T23:00:00', '2022-03-22T23:00:00'),
-       (15, '2022-03-20T23:00:00', '2022-03-22T23:00:00'),
-       (15, '2022-03-20T23:00:00', '2022-03-22T23:00:00'),
-       (21, '2022-03-22T23:00:00', '2022-03-25T23:00:00'),
-       (21, '2022-03-22T23:00:00', '2022-03-28T23:00:00'),
-       (21, '2022-03-22T23:00:00', '2022-03-29T23:00:00'),
-       (22, '2022-03-27T23:00:00', '2022-03-28T23:00:00'),
-       (22, '2022-03-28T23:00:00', '2022-03-29T23:00:00'),
-       (22, '2022-03-29T23:00:00', '2022-03-30T23:00:00'),
-       (23, '2022-03-28T23:00:00', '2022-03-30T23:00:00'),
-       (23, '2022-03-29T23:00:00', '2022-03-31T23:00:00'),
-       (23, '2022-03-30T23:00:00', '2022-04-01T23:00:00'),
-       (24, '2022-03-30T23:00:00', '2022-03-30T23:00:00'),
-       (24, '2022-03-31T23:00:00', '2022-03-31T23:00:00'),
-       (24, '2022-04-01T23:00:00', '2022-04-01T23:00:00'),
-       (25, '2022-03-30T23:00:00', '2022-04-08T23:00:00'),
-       (25, '2022-03-31T23:00:00', '2022-04-11T23:00:00'),
-       (25, '2022-04-03T23:00:00', '2022-04-12T23:00:00'),
-       (31, '2022-03-13T23:00:00', '2022-03-18T23:00:00'),
-       (31, '2022-03-13T23:00:00', '2022-03-18T23:00:00'),
-       (31, '2022-03-13T23:00:00', '2022-03-18T23:00:00'),
-       (331, '2022-03-20T23:00:00', '2022-04-01T23:00:00'),
-       (331, '2022-03-20T23:00:00', '2022-04-01T23:00:00'),
-       (331, '2022-03-20T23:00:00', '2022-04-01T23:00:00'),
-       (332, '2022-03-20T23:00:00', '2022-03-26T23:00:00'),
-       (332, '2022-03-20T23:00:00', '2022-03-26T23:00:00'),
-       (332, '2022-03-20T23:00:00', '2022-03-26T23:00:00');
-
--- Insert resources data
-INSERT INTO resources (id, event, resource)
-VALUES (3, 12, 9),
-       (4, 13, 2),
-       (5, 13, 3),
-       (6, 13, 6),
-       (7, 13, 7),
-       (8, 13, 8),
-       (9, 21, 5),
-       (10, 21, 9),
-       (11, 22, 8),
-       (12, 25, NULL);
-
-INSERT INTO dependencies (from_task, to_task, type)
-VALUES (1, 11, 'FinishToStart'),
-       (1, 12, 'FinishToStart'),
-       (1, 13, 'FinishToStart'),
-       (1, 14, 'FinishToStart'),
-       (1, 15, 'FinishToStart'),
-       (2, 21, 'FinishToStart'),
-       (2, 22, 'FinishToStart'),
-       (2, 23, 'FinishToStart'),
-       (2, 24, 'FinishToStart'),
-       (2, 25, 'FinishToStart'),
-       (3, 31, 'FinishToStart'),
-       (3, 33, 'FinishToStart'),
-       (33, 331, 'FinishToStart'),
-       (33, 332, 'FinishToStart');
+-- Insert data into the dependencies table
+INSERT INTO dependencies (id, fromEvent, toEvent) VALUES
+(1, 2, 3),
+(2, 3, 4),
+(3, 4, 5),
+(4, 5, 6),
+(5, 1, 7),
+(6, 8, 9),
+(7, 9, 10),
+(8, 10, 11),
+(9, 11, 12);
 ```
 
-Click **Run** to run the queries, and a series of tables will be created and populated with data.
+Click **Run** to run the queries, two tables will be created and populated with data.
 
 ## Enable RLS on the new table
 
-Let's enable RLS on the new table. In the **Authentication** tab, select **Policies** from the sidebar. Click **Enable RLS** for the new table.
+Let's enable RLS on the new tables. In the **Authentication** tab, select **Policies** from the sidebar. Click **Enable RLS** for the new tables.
 
 ![Create table policy](img/supabase_enable_policy.png)
 
@@ -284,35 +163,11 @@ async function getAllGanttData(supabaseClient: SupabaseClient) {
   const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*')
   if (dependencyError) throw dependencyError
 
-  // Query the calendars table
-  const { data: calendarData, error: calendarError } = await supabaseClient.from('calendars').select('*')
-  if (calendarError) throw calendarError
-
-  // Query the resources table
-  const { data: resourceData, error: resourceError } = await supabaseClient.from('resources').select('*')
-  if (resourceError) throw resourceError
-
-  // Query the projects table
-  const { data: projectData, error: projectError } = await supabaseClient.from('projects').select('*')
-  if (projectError) throw projectError
-
-  // Query the intervals table
-  const { data: intervalData, error: intervalError } = await supabaseClient.from('intervals').select('*')
-  if (intervalError) throw intervalError
-
-  // Query the baselines table
-  const { data: baselineData, error: baselineError } = await supabaseClient.from('baselines').select('*')
-  if (baselineError) throw baselineError
 
   // Combine the results
   const responseData = {
     tasks: taskData,
     dependencies: dependencyData,
-    calendars: calendarData,
-    resources: resourceData,
-    projects: projectData,
-    intervals: intervalData,
-    baselines: baselineData,
   }
 
   return new Response(JSON.stringify({ responseData }), {
