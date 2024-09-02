@@ -21,24 +21,11 @@ async function getGanttProps() {
   }
 
   const token = session.access_token;
-
-  // Call the REST API with auth headers
-  const response = await fetch('https://wnyfjxqbotytkwvcdbce.supabase.co/functions/v1/tasks-rest', {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  const url = 'https://wnyfjxqbotytkwvcdbce.supabase.co/functions/v1/gantt-data';
+  const header = {
+    'Content-Type': 'application/json', 
+    'Authorization': `Bearer ${token}`,
   }
-
-  const ganttData = await response.json();
-
-  // Extract the tasks and dependencies from the response
-  const tasks = ganttData.responseData.tasks;
-  const dependencies = ganttData.responseData.dependencies;
 
   return {
     columns: [{ type: 'name', field: 'name', width: 250 }],
@@ -46,13 +33,26 @@ async function getGanttProps() {
     barMargin: 10,
     project: {
         taskStore: {
-            transformFlatData: true,
-            },
-        tasks: tasks,
-        dependencies: dependencies,
+          transformFlatData: true,
+        },
         autoLoad: true,
+        autoSync: true,
         autoSetConstraints: true,
         validateResponse: true,
+        transport: {
+          load: {
+            url: url,
+            method: 'GET',
+            headers: header,
+            credentials: "omit",
+          },
+          sync: {
+            url: url,
+            method: 'POST',
+            headers: header,
+            credentials: "omit",
+          },
+        },
     },
   };
 }
