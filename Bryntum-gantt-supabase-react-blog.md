@@ -462,7 +462,7 @@ npx supabase functions deploy gantt-data --project-ref <Project_Ref_Id>
 
 Replace `<Project_Ref_Id>` with your Supabase project reference ID.
 
-Navigate to your Supabase instance and you should see your new Edge Function deployed:
+Navigate to your Supabase instance and you should see your new Edge Function deployed. Note down the URL for use later.
 
 ![View deployed function](img/supabase_deployed.png)
 
