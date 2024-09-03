@@ -22,7 +22,7 @@ Give your project a name, set a password for the database, select a region, and 
 
 ![Create project form](img/supabase_create_project_form.png)
 
-You'll need the reference ID and API key for your new project.
+You'll need to note down the reference ID and API key for your new project for use later.
 
 Find the reference ID in the project settings under **General**.
 
@@ -134,7 +134,7 @@ Now click **Create policy**. In the dialog that opens, give the new policy a nam
 
 This policy allows only authenticated users to read the data in the table. Users can be assigned policies that dictate their access to specific rows in tables.
 
-You'll need to follow the same process for every table you add that you would like authenticated users to access. Tables with RLS enabled and no policies assigned will not allow any user, except the superuser, to access the table data.
+You'll need to follow the same process and enable the appropriate policy command for every table you add that you would like authenticated users to access or modify. Tables with RLS enabled and no policies assigned will not allow any user, except the superuser, to access the table data.
 
 ## Use Supabase CLI to develop an Edge Function
 
@@ -156,19 +156,13 @@ Now create a new Edge Function:
 npx supabase functions new gantt-data
 ```
 
-You can now navigate into your newly created `functions` directory:
-
-```sh
-cd functions
-```
-
-Then create a new directory `_shared`:
+In the newly created `supabase/functions` directory create a new directory called `_shared`:
 
 ```sh
 mkdir _shared
 ```
 
-And inside that directory, create a new file named `cors.ts` and add the following:
+Inside `_shared` directory, create a new file named `cors.ts` and add the following code to it:
 
 ```ts
 export const corsHeaders = {
@@ -176,6 +170,7 @@ export const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   }
 ```
+
 You use this to configure CORS headers to allow cross-site traffic, authorization headers, api key, content type, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods. This allows you to use your Edge Function as a RESTful API that can be called from a front-end using the appropriate URL of the edge function. You will see this once you have deployed the function to your Supabase project and connected to it via your React application.
 
 Back in your `functions` directory, open the `functions/gantt-data/index.ts` file that you created, clear everything, and add the following:
@@ -183,8 +178,6 @@ Back in your `functions` directory, open the `functions/gantt-data/index.ts` fil
 ```ts
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
-
-console.log(`Function "gantt-data" up and running!`)
 ```
 
 Now add the following function:
@@ -193,7 +186,6 @@ Now add the following function:
 async function applyTableChanges(client: SupabaseClient, table: string, changes) {
   let rows;
   if (changes.added) {
-    console.log(`Inserting new data into the "${table}" table...`)
     for (const row of changes.added) {
       delete row['$PhantomId']
       delete row['baselines']
@@ -208,14 +200,12 @@ async function applyTableChanges(client: SupabaseClient, table: string, changes)
     }
   }
   if (changes.updated) {
-    console.log(`Updating data in the "${table}" table...`)
     for (const row of changes.updated) {
       const { error } = await client.from(table).update(row).eq('id', row.id).select()
       if (error) throw error
     }
   }
   if (changes.removed) {
-    console.log(`Deleting data from the "${table}" table...`)
     for (const row of changes.removed) {
       const { error } = await client.from(table).delete().eq('id', row.id)
       if (error) throw error
@@ -228,7 +218,7 @@ async function applyTableChanges(client: SupabaseClient, table: string, changes)
 
 This function you created is called when a request is received to create, update or delete values in the database.
 You use the Supabase client to perform the operations depending on the changes passed to the function.
-For simplicity, there are some keys that you are removing from the request, that is done with the following:
+For simplicity, there are some keys that you are removing from the request, that is done with the following code:
 
 ```ts
 delete row['$PhantomId']
@@ -239,6 +229,7 @@ delete row['direction']
 delete row['projectConstraintResolution']
 delete row['unscheduled']
 ```
+
 For actual production use cases, the only key that needs to be removed is `$PhantomId`, this value is not meant to persist in your database, it is purely used to identify records on the client-side.
 
 Next, add the code to start the [Deno](https://supabase.com/blog/edge-runtime-self-hosted-deno-functions) runtime:
@@ -309,7 +300,6 @@ Now add a handle for `GET` requests:
 
 ```ts
 if (req.method === 'GET') {     
-  console.log(`Received a GET request...`) 
   // Query the tasks table
   const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*')
   if (taskError) throw taskError
@@ -367,8 +357,8 @@ if (req.method === 'POST') {
 }
 ```
 
-When a `POST` request is received, you first extract the body of the request and create a response structure.
-You then check if the body contains any changes for the the `tasks` or `dependencies` tables. If there are changes the `applyTableChanges` function that you added earlier is called, which then performs the relevant operation and returns any result there may be.
+When a `POST` request is received, you first extract the body of the request and create a response object.
+You then check if the body contains any changes for `tasks` or `dependencies` tables. If there are changes the `applyTableChanges` function that you added earlier is called, which then performs the relevant operation and returns any result there may be.
 The response is then packed up and returned.
 
 Your entire server function should look something like this:
@@ -398,7 +388,6 @@ Deno.serve(async (req: Request) => {
     )
 
     if (req.method === 'GET') {     
-      console.log(`Received a GET request...`) 
       // Query the tasks table
       const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*')
       if (taskError) throw taskError
@@ -418,7 +407,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === 'POST') {
-      console.log(`Received a POST request...`)
       const body = await req.json();
       const responseData = { requestId: body.requestId, success : true };
 
@@ -642,7 +630,7 @@ async function getGanttProps() {
   }
 
   const token = session.access_token;
-  const url = 'https://wnyfjxqbotytkwvcdbce.supabase.co/functions/v1/gantt-data';
+  const url = 'https://<Edge_Functuin_Id>.supabase.co/functions/v1/gantt-data';
   const header = {
     'Content-Type': 'application/json', 
     'Authorization': `Bearer ${token}`,
@@ -681,10 +669,13 @@ async function getGanttProps() {
 export { getGanttProps };
 ```
 
+Replace `<Edge_Functuin_Id>` with the value from deployed function's URL.
+
 Here you created a function that gets the user session and invokes the edge function you previously created by sending a `GET` or `POST` request to your edge functions' URL `https://<Edge_Functuin_Id>.supabase.co/functions/v1/gantt-data`. If no session is available, and empty Gantt properties object will be returned.
 If a valid session can be found, proper configuration that the Gantt chart can use to query the data are passed back.
 
 The most important part to note is this piece of the config:
+
 ```ts
 transport: {
   load: {
@@ -701,7 +692,8 @@ transport: {
   },
 },
 ```
-Notice that the method for `load` is set to `GET`, and for `sync` is is set to `POST`, this is what your edge function is using to decide how to respond. The `Authorization` headers are also passed, so that we can make use of the token inside the edge function to enforce RLS.
+
+Notice that the method for `load` is set to `GET`, and for `sync` is set to `POST`, this is what your edge function is using to decide how to respond. The `Authorization` headers are also passed, so that we can make use of the token inside the edge function to enforce RLS.
 
 Now you can run the application with:
 
