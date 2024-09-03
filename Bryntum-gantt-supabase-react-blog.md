@@ -47,7 +47,6 @@ Navigate to the SQL Editor tab.
 Click **+ New query** from the sidebar and paste the following SQL commands into the editor:
 
 ```sql
--- Create the tasks table
 CREATE TABLE tasks (
     "id" SERIAL PRIMARY KEY,
     "parentId" INTEGER REFERENCES tasks("id") ON DELETE CASCADE,
@@ -76,9 +75,11 @@ CREATE TABLE tasks (
     "calendar" INTEGER,
     "deadline" DATE
 );
--- Create the dependencies table
+
 CREATE TABLE dependencies (
     "id" SERIAL PRIMARY KEY,
+    "from" INTEGER,
+    "to" INTEGER,
     "fromEvent" INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
     "toEvent" INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
     "type" INTEGER DEFAULT 2,
@@ -105,17 +106,17 @@ VALUES
 ('UI unit tests / individual screens', 0, '2024-06-25', '2024-06-28', 7, NULL, NULL),
 ('Application tests', 0, '2024-05-21', '2024-06-02', 7, NULL, NULL);
 
-INSERT INTO dependencies ("id", "fromEvent", "toEvent")
+INSERT INTO dependencies ("fromEvent", "toEvent")
 VALUES 
-(1, 2, 3),
-(2, 3, 4),
-(3, 4, 5),
-(4, 5, 6),
-(5, 1, 7),
-(6, 8, 9),
-(7, 9, 10),
-(8, 10, 11),
-(9, 11, 12);
+(2, 3),
+(3, 4),
+(4, 5),
+(5, 6),
+(1, 7),
+(8, 9),
+(9, 10),
+(10, 11),
+(11, 12);
 ```
 **Note:** the `"` around the column names, Postgres by default names database tables and columns without any capitalization which will cause the Gantt chart to not behave as expected. Wrap all the column names that have capitals with quotes to prevent these issues from occurring.
 
