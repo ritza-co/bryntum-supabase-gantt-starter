@@ -505,8 +505,7 @@ export const supabase = createClient('https://<Project_Ref_Id>.supabase.co',
 )
 ```
 
-Here you configure the client connection to the Supabase project, which will be used for all interactions with the Supabase instance. You'll use this client to call the Edge Function.
-
+Here you configure the client connection to the Supabase project. The application uses this client to get the session token for the currently logged-in user, which is then passed to the Edge Function.
 
 Find your `src/main.jsx` file and replace its contents with the following:
 
@@ -660,7 +659,7 @@ export { getGanttProps };
 
 Replace `<Edge_Functuin_Id>` with the value from the deployed function's URL.
 
-This creates a function that gets the user session and invokes the Edge Function by sending a `GET` or `POST` request to the Edge Function URL, for example, `https://<Edge_Functuin_Id>.supabase.co/functions/v1/gantt-data`. If no session is available, an empty Gantt properties object will be returned.
+This creates a function that gets the user session and invokes the Edge Function by sending a `GET` or `POST` request to the Edge Function URL, for example, `https://<Edge_Function_Id>.supabase.co/functions/v1/gantt-data`. If no session is available, an empty Gantt properties object will be returned.
 If a valid session is found, configuration is passed back so that the Gantt chart can use it to query the data.
 
 Notice that the method for `load` is set to `GET`, and for `sync` is set to `POST`. The Edge Function uses this to select the appropriate response. The `Authorization` headers are passed so that RLS can be enforced using the token in the Edge Function.
