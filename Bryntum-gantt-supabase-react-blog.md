@@ -9,7 +9,7 @@ In this post, we'll show you how to integrate Bryntum Gantt with a Supabase Post
 To follow along with this guide, you'll need:
 
 - A Supabase account. Create one [here](https://supabase.com/dashboard/sign-in?returnTo=%2Fprojects).
-- A running React app. Use our quickstart guide [here](https://bryntum.com/products/gantt/docs/guide/Gantt/quick-start/react) to set up a Bryntum Gantt React project.
+- A running React app. Use our quick start guide [here](https://bryntum.com/products/gantt/docs/guide/Gantt/quick-start/react) to set up a Bryntum Gantt React project.
 - A Bryntum Gantt license, or [sign up for a free trial version](https://bryntum.com/download/).
 
 ## Create a Supabase project
@@ -118,9 +118,9 @@ VALUES
 (10, 11),
 (11, 12);
 ```
-**Note:** the `"` around the column names, Postgres by default names database tables and columns without any capitalization which will cause the Gantt chart to not behave as expected. Wrap all the column names that have capitals with quotes to prevent these issues from occurring.
+**Note:** We use `"` around the column names as Postgres by default names database tables and columns without any capitalization which will cause the Gantt chart to behave in unexpected ways. Wrap all column names that have capitals with quotes to prevent these issues.
 
-Click **Run** to run the queries, two tables will be created and populated with data.
+Click **Run** to run the queries. Two tables will be created and populated with data.
 
 ## Enable RLS on the new tables
 
@@ -162,7 +162,7 @@ In the newly created `supabase/functions` directory create a new directory calle
 mkdir _shared
 ```
 
-Inside `_shared` directory, create a new file named `cors.ts` and add the following code to it:
+Inside the `_shared` directory, create a new file named `cors.ts` and add the following code to it:
 
 ```ts
 export const corsHeaders = {
@@ -171,9 +171,9 @@ export const corsHeaders = {
   }
 ```
 
-You use this to configure CORS headers to allow cross-site traffic, authorization headers, api key, content type, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods. This allows you to use your Edge Function as a RESTful API that can be called from a front-end using the appropriate URL of the edge function. You will see this once you have deployed the function to your Supabase project and connected to it via your React application.
+This configures the CORS headers to allow cross-site traffic and specifies that authorization headers, API key, content type, and the `POST`, `GET`, `OPTIONS`, `PUT`, and `DELETE` methods can be included in requests. This allows you to use the Edge Function as a RESTful API that can be called from a frontend using the Edge Function's URL. 
 
-Back in your `functions` directory, open the `functions/gantt-data/index.ts` file that you created, clear everything, and add the following:
+In the `functions` directory, open the `functions/gantt-data/index.ts` file and replace its contents with the following:
 
 ```ts
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -216,21 +216,10 @@ async function applyTableChanges(client: SupabaseClient, table: string, changes)
 }
 ```
 
-This function you created is called when a request is received to create, update or delete values in the database.
+This function is called when a request is received to create, update, or delete values in the database.
 You use the Supabase client to perform the operations depending on the changes passed to the function.
-For simplicity, there are some keys that you are removing from the request, that is done with the following code:
 
-```ts
-delete row['$PhantomId']
-delete row['baselines']
-delete row['delayFromParent']
-delete row['segments']
-delete row['direction']
-delete row['projectConstraintResolution']
-delete row['unscheduled']
-```
-
-For actual production use cases, the only key that needs to be removed is `$PhantomId`, this value is not meant to persist in your database, it is purely used to identify records on the client-side.
+For simplicity, we delete some keys from the request, for example, `'$PhantomId'` and `'baselines'`. In real-world production use cases, you only need to remove the `$PhantomId` key. The Phantom ID value is not meant to persist in your database, it's merely used to identify records on the client side.
 
 Next, add the code to start the [Deno](https://supabase.com/blog/edge-runtime-self-hosted-deno-functions) runtime:
 
@@ -248,7 +237,7 @@ Extract the method from the received request:
 const { method } = req
 ```
 
-And set up the response for an `OPTIONS` request:
+Set up the response for an `OPTIONS` request:
 
 ```ts
 if (method === 'OPTIONS') {
@@ -256,7 +245,7 @@ if (method === 'OPTIONS') {
 }
 ```
 
-This returns the CORS headers from the `cors.ts` file you added earlier.
+This returns the CORS headers from the `cors.ts` file you added previously.
 
 Next, add a `try..catch` block that will house the rest of our server function:
 
@@ -274,7 +263,7 @@ catch (error) {
 }
 ```
 
-This will catch any errors in the unsafe code, then return a status code and error message.
+This will catch any errors in the unsafe code, and then return a status code and error message.
 
 Inside the braces of your `try{}` block, first create a Supabase client:
 
@@ -294,9 +283,9 @@ const supabaseClient = createClient(
 )
 ```
 
-The Deno runtime has access to the environment variables of your Supabase instance. Using the `SUPABASE_URL` and `SUPABASE_ANON_KEY`, along with authorization headers which will be received from the request, this client will be used to interact with your database.
+The Deno runtime has access to the environment variables of your Supabase instance. Using the `SUPABASE_URL` and `SUPABASE_ANON_KEY`, along with authorization headers received from the request, this client will be used to interact with your database.
 
-Now add a handle for `GET` requests:
+Now add a `GET` request handler:
 
 ```ts
 if (req.method === 'GET') {     
@@ -319,9 +308,9 @@ if (req.method === 'GET') {
 }
 ```
 
-This will query your `tasks` & `dependencies` tables, combine the results and return it.
+This will query your `tasks` and `dependencies` tables, combine the results, and return them.
 
-And now add a handle for `POST` requests:
+Now add a `POST` request handler:
 
 ```ts
 if (req.method === 'POST') {
@@ -357,11 +346,11 @@ if (req.method === 'POST') {
 }
 ```
 
-When a `POST` request is received, you first extract the body of the request and create a response object.
-You then check if the body contains any changes for `tasks` or `dependencies` tables. If there are changes the `applyTableChanges` function that you added earlier is called, which then performs the relevant operation and returns any result there may be.
-The response is then packed up and returned.
+When a `POST` request is received, this handler extracts the body of the request and creates a response object.
+It then checks whether the body contains changes for the `tasks` or `dependencies` tables. If there are changes, the `applyTableChanges` function you previously added is called to perform the relevant operation and return the results.
+The response is then constructed and returned.
 
-Your entire server function should look something like this:
+The entire server function should look something like this:
 
 ```ts
 Deno.serve(async (req: Request) => {
@@ -372,7 +361,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Create a Supabase client with the Auth context of the logged in user.
+    // Create a Supabase client with the Auth context of the logged-in user.
     const supabaseClient = createClient(
       // Supabase API URL - env var exported by default.
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -446,7 +435,7 @@ Deno.serve(async (req: Request) => {
 })
 ```
 
-### Deploy Edge Function
+### Deploy the Edge Function
 
 Generate the CLI access token by logging in:
 
@@ -462,13 +451,13 @@ npx supabase functions deploy gantt-data --project-ref <Project_Ref_Id>
 
 Replace `<Project_Ref_Id>` with your Supabase project reference ID.
 
-Navigate to your Supabase instance and you should see your new Edge Function deployed. Note down the URL for use later.
+Navigate to your Supabase instance and you should see your new Edge Function deployed. Note down the URL to use later.
 
 ![View deployed function](img/supabase_deployed.png)
 
-Here you can see the URL you can use to invoke your Edge Function.
+Here you can see the URL you can use to invoke the Edge Function.
 
-Edge functions run server-side in your Supabase instance and enforce the security policies you stipulate to give you secure, low-latency access to the data stored in your Postgres database. Edge Functions can be configured in various ways and are easily adapted to perform a range of tasks or processes using any table or combination of tables.
+Edge Functions run server-side in your Supabase instance and enforce the security policies you stipulate to give you secure, low-latency access to the data stored in your Postgres database. Edge Functions can be configured in various ways and are easily adapted to perform a range of tasks or processes using any table or combination of tables.
 
 
 ## Add Bryntum Gantt to the React application
@@ -506,7 +495,7 @@ Create a new utilities directory within the `src` directory of your code:
 mkdir utils
 ```
 
-In the `utils` directory add a new JavaScript file named `supabaseClient.js` inside the directory and paste the following into it, replacing `<Project_Ref_Id>` and `<Supabase_Anonymous_Key>` with your Supabase values:
+In the `utils` directory, add a new JavaScript file named `supabaseClient.js` and paste the following into it, replacing `<Project_Ref_Id>` and `<Supabase_Anonymous_Key>` with your Supabase values:
 
 ```js
 import { createClient } from '@supabase/supabase-js'
@@ -516,8 +505,7 @@ export const supabase = createClient('https://<Project_Ref_Id>.supabase.co',
 )
 ```
 
-Here you configured the client connection to the Supabase project, which will be used for all interactions with the Supabase instance. You'll use this client to call your edge function.
-
+Here you configure the client connection to the Supabase project. The application uses this client to get the session token for the currently logged-in user, which is then passed to the Edge Function.
 
 Find your `src/main.jsx` file and replace its contents with the following:
 
@@ -540,7 +528,7 @@ root.render(
 
 This code imports the `supabaseClient` you created, adds the Supabase React Auth UI as the user context provider, and launches the app.
 
-Still in your `src` directory, replace everything in the `App.jsx` file with the following:
+Still in your `src` directory, replace the contents of the `App.jsx` file with the following:
 
 ```js
 import './App.scss';
@@ -669,31 +657,12 @@ async function getGanttProps() {
 export { getGanttProps };
 ```
 
-Replace `<Edge_Functuin_Id>` with the value from deployed function's URL.
+Replace `<Edge_Functuin_Id>` with the value from the deployed function's URL.
 
-Here you created a function that gets the user session and invokes the edge function you previously created by sending a `GET` or `POST` request to your edge functions' URL `https://<Edge_Functuin_Id>.supabase.co/functions/v1/gantt-data`. If no session is available, and empty Gantt properties object will be returned.
-If a valid session can be found, proper configuration that the Gantt chart can use to query the data are passed back.
+This creates a function that gets the user session and invokes the Edge Function by sending a `GET` or `POST` request to the Edge Function URL, for example, `https://<Edge_Function_Id>.supabase.co/functions/v1/gantt-data`. If no session is available, an empty Gantt properties object will be returned.
+If a valid session is found, configuration is passed back so that the Gantt chart can use it to query the data.
 
-The most important part to note is this piece of the config:
-
-```ts
-transport: {
-  load: {
-    url: url,
-    method: 'GET',
-    headers: header,
-    credentials: "omit",
-  },
-  sync: {
-    url: url,
-    method: 'POST',
-    headers: header,
-    credentials: "omit",
-  },
-},
-```
-
-Notice that the method for `load` is set to `GET`, and for `sync` is set to `POST`, this is what your edge function is using to decide how to respond. The `Authorization` headers are also passed, so that we can make use of the token inside the edge function to enforce RLS.
+Notice that the method for `load` is set to `GET`, and for `sync` is set to `POST`. The Edge Function uses this to select the appropriate response. The `Authorization` headers are passed so that RLS can be enforced using the token in the Edge Function.
 
 Now you can run the application with:
 
