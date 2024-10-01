@@ -1,16 +1,9 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
-
-console.log(`Function "gantt-data" up and running!`)
 
 async function applyTableChanges(client: SupabaseClient, table: string, changes) {
   let rows;
   if (changes.added) {
-    console.log(`Inserting new data into the "${table}" table...`)
     for (const row of changes.added) {
       delete row['$PhantomId']
       delete row['baselines']
@@ -25,14 +18,12 @@ async function applyTableChanges(client: SupabaseClient, table: string, changes)
     }
   }
   if (changes.updated) {
-    console.log(`Updating data in the "${table}" table...`)
     for (const row of changes.updated) {
       const { error } = await client.from(table).update(row).eq('id', row.id).select()
       if (error) throw error
     }
   }
   if (changes.removed) {
-    console.log(`Deleting data from the "${table}" table...`)
     for (const row of changes.removed) {
       const { error } = await client.from(table).delete().eq('id', row.id)
       if (error) throw error
@@ -50,7 +41,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Create a Supabase client with the Auth context of the logged in user.
+    // Create a Supabase client with the Auth context of the logged-in user.
     const supabaseClient = createClient(
       // Supabase API URL - env var exported by default.
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -66,7 +57,6 @@ Deno.serve(async (req: Request) => {
     )
 
     if (req.method === 'GET') {     
-      console.log(`Received a GET request...`) 
       // Query the tasks table
       const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*')
       if (taskError) throw taskError
@@ -86,7 +76,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === 'POST') {
-      console.log(`Received a POST request...`)
       const body = await req.json();
       const responseData = { requestId: body.requestId, success : true };
 

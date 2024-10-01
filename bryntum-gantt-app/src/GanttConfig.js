@@ -21,7 +21,7 @@ async function getGanttProps() {
   }
 
   const token = session.access_token;
-  const url = 'https://wnyfjxqbotytkwvcdbce.supabase.co/functions/v1/gantt-data';
+  const url = 'https://<Edge_Function_Id>.supabase.co/functions/v1/gantt-data';
   const header = {
     'Content-Type': 'application/json', 
     'Authorization': `Bearer ${token}`,
