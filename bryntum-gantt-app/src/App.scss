@@ -1,7 +1,7 @@
-// import bryntum theme
 @import "@bryntum/gantt/gantt.stockholm.css";
 
-// Giving our gantt some height
 #root {
   height: 100vh;
+  width: 100vw;
+  font-family: Poppins, "Open Sans", Helvetica, Arial, sans-serif;
 }
