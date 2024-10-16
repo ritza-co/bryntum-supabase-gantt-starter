@@ -1,4 +1,4 @@
-# Bryntum Gantt with Supabase edge functions starter
+# Bryntum Gantt with Supabase Edge Functions starter
 
 This repository contains a sample Bryntum Gantt React application.
 
