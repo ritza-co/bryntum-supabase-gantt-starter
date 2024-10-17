@@ -58,11 +58,11 @@ Deno.serve(async (req: Request) => {
 
     if (req.method === 'GET') {     
       // Query the tasks table
-      const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*')
+      const { data: taskData, error: taskError } = await supabaseClient.from('tasks').select('*').order("id", { ascending: true });
       if (taskError) throw taskError
 
       // Query the dependencies table
-      const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*')
+      const { data: dependencyData, error: dependencyError } = await supabaseClient.from('dependencies').select('*').order("id", { ascending: true });
       if (dependencyError) throw dependencyError
 
       return new Response(JSON.stringify({ 
